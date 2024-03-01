@@ -12,8 +12,8 @@ MicroDS18B20<A3> sensor;
 float voltage,temperature = 25;
 uint16_t ecValue;
 DFRobot_EC ec;
-
-
+int calibration_cmd_enterec, calibration_cmd_calec, calibration_cmd_exitec;
+char* cmd;
 
 void setup() {
     Serial.begin(9600);
@@ -27,6 +27,7 @@ void setup() {
 
     // configure a single coil at address 0x00
     ModbusRTUServer.configureInputRegisters(0x0000, 2);
+    ModbusRTUServer.configureCoils(0x0000,3);
     //ModbusRTUServer.configureHoldingRegisters(0x0000,20);
 }
 void loop() {
@@ -34,10 +35,19 @@ void loop() {
 
     int packetReceived = ModbusRTUServer.poll();
     if(packetReceived) {
-
+        calibration_cmd_enterec=ModbusRTUServer.coilRead(enterec_addres);
+        calibration_cmd_calec=ModbusRTUServer.coilRead(calec_addres);
+        calibration_cmd_exitec=ModbusRTUServer.coilRead(exitec_addres);
         ModbusRTUServer.inputRegisterWrite(EC_address,ecValue);
         ModbusRTUServer.inputRegisterWrite(temp_address,(uint16_t)(temperature*100));
 
+    }
+    if(calibration_cmd_enterec)
+    {
+        voltage = analogRead(EC_PIN)/1024.0*5000;
+        sensor.requestTemp();
+        temperature=sensor.getTemp();
+        ec.calibration(voltage,temperature);
     }
 
     static unsigned long timepoint = millis();
@@ -46,14 +56,7 @@ void loop() {
     {
         timepoint = millis();
         voltage = analogRead(EC_PIN)/1024.0*5000;   // read the voltage
-        sensor.requestTemp();
-        if (sensor.readTemp())
-        {
-            temperature=sensor.getTemp();
-        }
-        else Serial.println("error");         // read your temperature sensor to execute temperature compensation
         ecValue =  (uint16_t)(ec.readEC(voltage,temperature)*1000);  // convert voltage to EC with temperature compensation
-
         Serial.print("temperature:");
         Serial.print(temperature,1);
         Serial.print("^C  EC:");

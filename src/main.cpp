@@ -3,21 +3,65 @@
 #include <ArduinoRS485.h>
 #include <DFRobot_EC.h>
 #include <microDS18B20.h>
+
+#include <EEPROM.h>
+
+#define EC_PIN A1
 MicroDS18B20<A3> sensor;
+float voltage,ecValue,temperature = 25;
+DFRobot_EC ec;
 
 
 
 void setup() {
     Serial.begin(9600);
+    Serial.println("Modbus RTU Server");
+
+    // start the Modbus RTU server, with (slave) id 1
+    if (!ModbusRTUServer.begin(1, 9600)) {
+        Serial.println("Failed to start Modbus RTU Server!");
+
+    }
+
+    // configure a single coil at address 0x00
+    ModbusRTUServer.configureInputRegisters(0x00, 1);
 }
 void loop() {
-    // запрос температуры
-    sensor.requestTemp();
 
-    // вместо delay используй таймер на millis(), пример async_read
-    delay(1000);
 
-    // проверяем успешность чтения и выводим
-    if (sensor.readTemp()) Serial.println(sensor.getTemp());
-    else Serial.println("error");
+    int packetReceived = ModbusRTUServer.poll();
+    if(packetReceived) {
+        // read the current value of the coil
+        int coilValue = ModbusRTUServer.coilRead(0x00);
+
+    }
+
+    static unsigned long timepoint = millis();
+
+    if(millis()-timepoint>1000U)  //time interval: 1s
+    {
+        timepoint = millis();
+        voltage = analogRead(EC_PIN)/1024.0*5000;   // read the voltage
+        sensor.requestTemp();
+        if (sensor.readTemp())
+        {
+            temperature=sensor.getTemp();
+        }
+        else Serial.println("error");         // read your temperature sensor to execute temperature compensation
+        ecValue =  ec.readEC(voltage,temperature);  // convert voltage to EC with temperature compensation
+        Serial.print("temperature:");
+        Serial.print(temperature,1);
+        Serial.print("^C  EC:");
+        Serial.print(ecValue,2);
+        Serial.println("ms/cm");
+    }
+
+
+
 }
+
+
+
+
+
+

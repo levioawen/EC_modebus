@@ -3,12 +3,14 @@
 #include <ArduinoRS485.h>
 #include <DFRobot_EC.h>
 #include <microDS18B20.h>
-
 #include <EEPROM.h>
+#include <Address_map.h>
+
 
 #define EC_PIN A1
 MicroDS18B20<A3> sensor;
-float voltage,ecValue,temperature = 25;
+float voltage,temperature = 25;
+uint16_t ecValue;
 DFRobot_EC ec;
 
 
@@ -24,15 +26,17 @@ void setup() {
     }
 
     // configure a single coil at address 0x00
-    ModbusRTUServer.configureInputRegisters(0x00, 1);
+    ModbusRTUServer.configureInputRegisters(0x0000, 10);
+    ModbusRTUServer.configureHoldingRegisters(0x0000,20);
 }
 void loop() {
 
 
     int packetReceived = ModbusRTUServer.poll();
     if(packetReceived) {
-        // read the current value of the coil
-        int coilValue = ModbusRTUServer.coilRead(0x00);
+
+        ModbusRTUServer.inputRegisterWrite(EC_address,ecValue);
+        ModbusRTUServer.holdingRegisterWrite(t_address,(uint16_t)temperature);
 
     }
 
@@ -48,12 +52,14 @@ void loop() {
             temperature=sensor.getTemp();
         }
         else Serial.println("error");         // read your temperature sensor to execute temperature compensation
-        ecValue =  ec.readEC(voltage,temperature);  // convert voltage to EC with temperature compensation
+        ecValue =  (uint16_t)(ec.readEC(voltage,temperature)*1000);  // convert voltage to EC with temperature compensation
+
         Serial.print("temperature:");
         Serial.print(temperature,1);
         Serial.print("^C  EC:");
-        Serial.print(ecValue,2);
-        Serial.println("ms/cm");
+        Serial.print(ecValue);
+
+        Serial.println("us/cm");
     }
 
 

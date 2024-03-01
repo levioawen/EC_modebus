@@ -206,5 +206,5 @@ void RS485Class::setDelays(int predelay, int postdelay)
 #ifdef RS485_SERIAL_PORT
 RS485Class RS485(RS485_SERIAL_PORT, RS485_DEFAULT_TX_PIN, RS485_DEFAULT_DE_PIN, RS485_DEFAULT_RE_PIN);
 #else
-RS485Class RS485(Serial1, 14, 5, 4);
+RS485Class RS485(Serial3, 14, 5, 4);
 #endif

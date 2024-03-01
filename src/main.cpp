@@ -26,8 +26,8 @@ void setup() {
     }
 
     // configure a single coil at address 0x00
-    ModbusRTUServer.configureInputRegisters(0x0000, 10);
-    ModbusRTUServer.configureHoldingRegisters(0x0000,20);
+    ModbusRTUServer.configureInputRegisters(0x0000, 2);
+    //ModbusRTUServer.configureHoldingRegisters(0x0000,20);
 }
 void loop() {
 
@@ -36,7 +36,7 @@ void loop() {
     if(packetReceived) {
 
         ModbusRTUServer.inputRegisterWrite(EC_address,ecValue);
-        ModbusRTUServer.holdingRegisterWrite(t_address,(uint16_t)temperature);
+        ModbusRTUServer.inputRegisterWrite(temp_address,(uint16_t)(temperature*100));
 
     }
 
@@ -61,12 +61,8 @@ void loop() {
 
         Serial.println("us/cm");
     }
-
-
-
 }
-
-
+void calibration(float voltage, float temperature, char* cmd);
 
 
 

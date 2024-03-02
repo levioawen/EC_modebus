@@ -28,6 +28,7 @@ public:
     ~DFRobot_EC();
     void    calibration(float voltage, float temperature,char* cmd);        //calibration by Serial CMD
     void    calibration(float voltage, float temperature);                  //calibration by Serial CMD
+    void    calibration_int(float voltage, float temperature,int cmd);      //calibration by int command
     float   readEC(float voltage, float temperature);                       // voltage to EC value, with temperature compensation
     void    begin();                                                        //initialization
 

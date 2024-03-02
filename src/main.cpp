@@ -13,7 +13,11 @@ float voltage,temperature = 25;
 uint16_t ecValue;
 DFRobot_EC ec;
 int calibration_cmd_enterec, calibration_cmd_calec, calibration_cmd_exitec;
-char* cmd;
+boolean calibration_mod= false;
+boolean calibration_mode_enter=false;
+boolean calibration_mode_calc=false;
+boolean calibration_mode_exit=false;
+
 
 void setup() {
     Serial.begin(9600);
@@ -42,17 +46,43 @@ void loop() {
         ModbusRTUServer.inputRegisterWrite(temp_address,(uint16_t)(temperature*100));
 
     }
-    if(calibration_cmd_enterec)
+    if(!calibration_cmd_enterec && !calibration_cmd_calec && !calibration_cmd_exitec)
     {
+        calibration_mode_enter= false;
+        calibration_mode_calc=false;
+        calibration_mode_exit=false;
+    }
+
+    if(calibration_cmd_enterec && !calibration_mode_enter)
+        {
+        calibration_mod=true;
+        calibration_mode_enter= true;
         voltage = analogRead(EC_PIN)/1024.0*5000;
         sensor.requestTemp();
         temperature=sensor.getTemp();
-        ec.calibration(voltage,temperature);
+        ec.calibration_int(voltage,temperature,1);
+        calibration_cmd_enterec=0;
+    }
+    if(calibration_cmd_calec && calibration_mode_enter && !calibration_mode_calc)
+    {
+        calibration_mode_calc=true;
+        voltage = analogRead(EC_PIN)/1024.0*5000;
+        sensor.requestTemp();
+        temperature=sensor.getTemp();
+        ec.calibration_int(voltage,temperature,2);
+    }
+    if(calibration_cmd_exitec && calibration_mode_enter && calibration_mode_calc && !calibration_mode_exit )
+    {
+        calibration_mode_exit=true;
+        voltage = analogRead(EC_PIN)/1024.0*5000;
+        sensor.requestTemp();
+        temperature=sensor.getTemp();
+        ec.calibration_int(voltage,temperature,3);
+        calibration_mod=false;
     }
 
     static unsigned long timepoint = millis();
-
-    if(millis()-timepoint>1000U)  //time interval: 1s
+    if(millis()-timepoint>1000U && !calibration_mod)  //time interval: 1s
     {
         timepoint = millis();
         voltage = analogRead(EC_PIN)/1024.0*5000;   // read the voltage
@@ -65,7 +95,7 @@ void loop() {
         Serial.println("us/cm");
     }
 }
-void calibration(float voltage, float temperature, char* cmd);
+
 
 
 

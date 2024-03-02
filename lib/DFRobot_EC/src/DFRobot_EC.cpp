@@ -106,6 +106,14 @@ void DFRobot_EC::calibration(float voltage, float temperature)
         ecCalibration(cmdParse());  // if received Serial CMD from the serial monitor, enter into the calibration mode
     }
 }
+void DFRobot_EC::calibration_int(float voltage, float temperature, int cmd)
+{
+    this->_voltage = voltage;
+    this->_temperature = temperature;
+
+
+        ecCalibration(cmd);  // if received Serial CMD from the serial monitor, enter into the calibration mode
+    }
 
 boolean DFRobot_EC::cmdSerialDataAvailable()
 {

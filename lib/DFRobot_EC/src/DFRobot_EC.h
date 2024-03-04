@@ -31,7 +31,8 @@ public:
     void    calibration_int(float voltage, float temperature,int cmd);      //calibration by int command
     float   readEC(float voltage, float temperature);                       // voltage to EC value, with temperature compensation
     void    begin();                                                        //initialization
-
+    float  kvalueLow;
+    float  kvalueHigh;
 private:
     float  _ecvalue;
     float  _kvalue;

@@ -3,7 +3,7 @@
 #include <ArduinoRS485.h>
 #include <DFRobot_EC.h>
 #include <microDS18B20.h>
-#include <EEPROM.h>
+//#include <EEPROM.h>
 #include <Address_map.h>
 
 
@@ -17,6 +17,7 @@ boolean calibration_mod= false;
 boolean calibration_mode_enter=false;
 boolean calibration_mode_calc=false;
 boolean calibration_mode_exit=false;
+boolean calibration_error_flag=false;
 
 
 void setup() {
@@ -44,6 +45,10 @@ void loop() {
         calibration_cmd_exitec=ModbusRTUServer.coilRead(exitec_addres);
         ModbusRTUServer.inputRegisterWrite(EC_address,ecValue);
         ModbusRTUServer.inputRegisterWrite(temp_address,(uint16_t)(temperature*100));
+        ModbusRTUServer.inputRegisterWrite(EC_address,ecValue);
+        ModbusRTUServer.inputRegisterWrite(EC_address,ecValue);
+        ModbusRTUServer.coilWrite(kvalueLow_address,(uint16_t)ec.kvalueLow*100);
+        ModbusRTUServer.coilWrite(kvalueHigh_address,(uint16_t)ec.kvalueHigh*100);
 
     }
     if(!calibration_cmd_enterec && !calibration_cmd_calec && !calibration_cmd_exitec)

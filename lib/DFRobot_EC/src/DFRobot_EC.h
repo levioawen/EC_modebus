@@ -33,6 +33,7 @@ public:
     void    begin();                                                        //initialization
     float  kvalueLow;
     float  kvalueHigh;
+    boolean errorflag;
 private:
     float  _ecvalue;
     float  _kvalue;

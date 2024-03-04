@@ -21,8 +21,6 @@ boolean calibration_error_flag=false;
 
 
 void setup() {
-    Serial.begin(9600);
-    Serial.println("Modbus RTU Server");
 
     // start the Modbus RTU server, with (slave) id 1
     if (!ModbusRTUServer.begin(1, 9600)) {
@@ -37,7 +35,7 @@ void setup() {
 }
 void loop() {
 
-
+    calibration_error_flag=ec.errorflag;
     int packetReceived = ModbusRTUServer.poll();
     if(packetReceived) {
         calibration_cmd_enterec=ModbusRTUServer.coilRead(enterec_addres);
@@ -92,12 +90,7 @@ void loop() {
         timepoint = millis();
         voltage = analogRead(EC_PIN)/1024.0*5000;   // read the voltage
         ecValue =  (uint16_t)(ec.readEC(voltage,temperature)*1000);  // convert voltage to EC with temperature compensation
-        Serial.print("temperature:");
-        Serial.print(temperature,1);
-        Serial.print("^C  EC:");
-        Serial.print(ecValue);
 
-        Serial.println("us/cm");
     }
 }
 

@@ -8,6 +8,6 @@
 #define enterec_addres 0x0000
 #define calec_addres 0x0001
 #define exitec_addres 0x0002
-
-#define calibration_run_address 0x0003
-#define calibration_error_address 0x0004
+#define run_addres 0x0003
+#define successful_address 0x0004
+#define error_address 0x0005

@@ -230,6 +230,7 @@ void DFRobot_EC::ecCalibration(byte mode)
                     }else if((this->_rawEC>9)&&(this->_rawEC<16.8)){
                         EEPROM_write(KVALUEADDR+4, this->_kvalueHigh);
                     }
+                    this->calib_succesfull=true;
                     //Serial.print(F(">>>Calibration Successful"));
                 }else{
                     this->errorflag=true;

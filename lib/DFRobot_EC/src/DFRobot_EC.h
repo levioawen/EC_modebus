@@ -34,6 +34,7 @@ public:
     float  kvalueLow;
     float  kvalueHigh;
     boolean errorflag;
+    boolean calib_succesfull;
 private:
     float  _ecvalue;
     float  _kvalue;

@@ -13,12 +13,10 @@ float voltage,temperature = 25;
 uint16_t ecValue;
 DFRobot_EC ec;
 int calibration_cmd_enterec, calibration_cmd_calec, calibration_cmd_exitec;
-boolean calibration_mod= false;
+boolean calibration_run= false;
 boolean calibration_mode_enter=false;
 boolean calibration_mode_calc=false;
 boolean calibration_mode_exit=false;
-boolean calibration_error_flag=false;
-
 
 void setup() {
 
@@ -29,37 +27,42 @@ void setup() {
     }
 
     // configure a single coil at address 0x00
-    ModbusRTUServer.configureInputRegisters(0x0000, 2);
-    ModbusRTUServer.configureCoils(0x0000,3);
+    ModbusRTUServer.configureInputRegisters(0x0000, 4);
+    ModbusRTUServer.configureCoils(0x0000,6);
     //ModbusRTUServer.configureHoldingRegisters(0x0000,20);
 }
 void loop() {
 
-    calibration_error_flag=ec.errorflag;
+
     int packetReceived = ModbusRTUServer.poll();
     if(packetReceived) {
         calibration_cmd_enterec=ModbusRTUServer.coilRead(enterec_addres);
         calibration_cmd_calec=ModbusRTUServer.coilRead(calec_addres);
         calibration_cmd_exitec=ModbusRTUServer.coilRead(exitec_addres);
+        ModbusRTUServer.coilWrite(run_addres,calibration_run);
+        ModbusRTUServer.coilWrite(successful_address,ec.calib_succesfull);
+        ModbusRTUServer.coilWrite(error_address,ec.errorflag);
         ModbusRTUServer.inputRegisterWrite(EC_address,ecValue);
         ModbusRTUServer.inputRegisterWrite(temp_address,(uint16_t)(temperature*100));
-        ModbusRTUServer.inputRegisterWrite(EC_address,ecValue);
-        ModbusRTUServer.inputRegisterWrite(EC_address,ecValue);
-        ModbusRTUServer.coilWrite(kvalueLow_address,(uint16_t)ec.kvalueLow*100);
-        ModbusRTUServer.coilWrite(kvalueHigh_address,(uint16_t)ec.kvalueHigh*100);
+        ModbusRTUServer.inputRegisterWrite(kvalueLow_address,(uint16_t)ec.kvalueLow*100);
+        ModbusRTUServer.inputRegisterWrite(kvalueHigh_address,(uint16_t)ec.kvalueHigh*100);
 
     }
     if(!calibration_cmd_enterec && !calibration_cmd_calec && !calibration_cmd_exitec)
     {
-        calibration_mode_enter= false;
-        calibration_mode_calc=false;
-        calibration_mode_exit=false;
+        ec.errorflag=FALSE;
+        calibration_mode_enter= FALSE;
+        calibration_mode_calc=FALSE;
+        calibration_mode_exit=FALSE;
+        calibration_run=FALSE;
+        ec.calib_succesfull=FALSE;
     }
-
+    if(calibration_run)digitalWrite(13,HIGH);
+    if(!calibration_run)digitalWrite(13,LOW);
     if(calibration_cmd_enterec && !calibration_mode_enter)
         {
-        calibration_mod=true;
-        calibration_mode_enter= true;
+        calibration_run=TRUE;
+        calibration_mode_enter= TRUE;
         voltage = analogRead(EC_PIN)/1024.0*5000;
         sensor.requestTemp();
         temperature=sensor.getTemp();
@@ -68,7 +71,7 @@ void loop() {
     }
     if(calibration_cmd_calec && calibration_mode_enter && !calibration_mode_calc)
     {
-        calibration_mode_calc=true;
+        calibration_mode_calc=TRUE;
         voltage = analogRead(EC_PIN)/1024.0*5000;
         sensor.requestTemp();
         temperature=sensor.getTemp();
@@ -76,16 +79,16 @@ void loop() {
     }
     if(calibration_cmd_exitec && calibration_mode_enter && calibration_mode_calc && !calibration_mode_exit )
     {
-        calibration_mode_exit=true;
+        calibration_mode_exit=TRUE;
         voltage = analogRead(EC_PIN)/1024.0*5000;
         sensor.requestTemp();
         temperature=sensor.getTemp();
         ec.calibration_int(voltage,temperature,3);
-        calibration_mod=false;
+        calibration_run=FALSE;
     }
 
     static unsigned long timepoint = millis();
-    if(millis()-timepoint>1000U && !calibration_mod)  //time interval: 1s
+    if(millis()-timepoint>1000U && !calibration_run)  //time interval: 1s
     {
         timepoint = millis();
         voltage = analogRead(EC_PIN)/1024.0*5000;   // read the voltage

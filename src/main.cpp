@@ -9,7 +9,8 @@
 
 #define EC_PIN A1
 MicroDS18B20<A3> sensor;
-float voltage,temperature = 25;
+float voltage_adc_ec();
+float temperature_1wire();
 uint16_t ecValue;
 DFRobot_EC ec;
 int calibration_cmd_enterec, calibration_cmd_calec, calibration_cmd_exitec;
@@ -19,7 +20,7 @@ boolean calibration_mode_calc=false;
 boolean calibration_mode_exit=false;
 
 void setup() {
-    ec.begin();
+    //ec.begin();
     // start the Modbus RTU server, with (slave) id 1
     if (!ModbusRTUServer.begin(1, 9600)) {
         Serial.println("Failed to start Modbus RTU Server!");
@@ -42,9 +43,9 @@ void loop() {
         ModbusRTUServer.coilWrite(run_addres,calibration_run);
         ModbusRTUServer.coilWrite(successful_address,ec.calib_succesfull);
         ModbusRTUServer.coilWrite(error_address,ec.errorflag);
-        ModbusRTUServer.inputRegisterWrite(EC_address,ecValue);
-        ModbusRTUServer.inputRegisterWrite(temp_address,(uint16_t)(temperature*100));
-        ModbusRTUServer.inputRegisterWrite(kvalueLow_address,(uint16_t)ec.kvalueLow*100);
+        ModbusRTUServer.inputRegisterWrite(EC_address,ecValue*1000);  // перевод из мили в микро сименсы на куб см
+        ModbusRTUServer.inputRegisterWrite(temp_address,(uint16_t)(temperature_1wire()));
+        ModbusRTUServer.inputRegisterWrite(kvalueLow_address,(uint16_t)ec.kvalueLow*100); // перевод из 1.23 в 123 вид
         ModbusRTUServer.inputRegisterWrite(kvalueHigh_address,(uint16_t)ec.kvalueHigh*100);
 
     }
@@ -63,33 +64,23 @@ void loop() {
         calibration_run=FALSE;
         ec.calib_succesfull=FALSE;
     }
-    if(calibration_run)digitalWrite(13,HIGH);
-    if(!calibration_run)digitalWrite(13,LOW);
+
     if(calibration_cmd_enterec && !calibration_mode_enter)
         {
 
         calibration_run=TRUE;
         calibration_mode_enter= TRUE;
-        voltage = analogRead(EC_PIN)/1024.0*5000;
-        sensor.requestTemp();
-        temperature=sensor.getTemp();
-        ec.calibration_int(voltage,25,1);
+        ec.calibration_int(voltage_adc_ec(),temperature_1wire(),1);
     }
     if(calibration_cmd_calec && calibration_mode_enter && !calibration_mode_calc)
     {
         calibration_mode_calc=TRUE;
-        voltage = analogRead(EC_PIN)/1024.0*5000;
-        sensor.requestTemp();
-        temperature=sensor.getTemp();
-        ec.calibration_int(voltage,25,2);
+        ec.calibration_int(voltage_adc_ec(),temperature_1wire(),2);
     }
     if(calibration_cmd_exitec && calibration_mode_enter && calibration_mode_calc && !calibration_mode_exit )
     {
         calibration_mode_exit=TRUE;
-        voltage = analogRead(EC_PIN)/1024.0*5000;
-        sensor.requestTemp();
-        temperature=sensor.getTemp();
-        ec.calibration_int(voltage,25,3);
+        ec.calibration_int(voltage_adc_ec(),temperature_1wire(),3);
         calibration_run=FALSE;
     }
 
@@ -97,13 +88,24 @@ void loop() {
     if(millis()-timepoint>1000U && !calibration_run)  //time interval: 1s
     {
         timepoint = millis();
-        voltage = analogRead(EC_PIN)/1024.0*5000;   // read the voltage
-        ecValue =  (uint16_t)(ec.readEC(voltage,temperature)*1000);  // convert voltage to EC with temperature compensation
+        ecValue =  (uint16_t)(ec.readEC(voltage_adc_ec(),temperature_1wire()));  // convert voltage to EC with temperature compensation
 
     }
 }
 
 
+float voltage_adc_ec()
+{
+    float voltage;
+    voltage = float(analogRead(EC_PIN)/1024.0*5000);   // read the voltage
+    return voltage;
+}
 
-
+float temperature_1wire()
+{
+    float temperature;
+    sensor.requestTemp();
+    temperature=sensor.getTemp();
+    return temperature;
+}
 

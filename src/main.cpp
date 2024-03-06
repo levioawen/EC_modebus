@@ -19,7 +19,7 @@ boolean calibration_mode_calc=false;
 boolean calibration_mode_exit=false;
 
 void setup() {
-
+    ec.begin();
     // start the Modbus RTU server, with (slave) id 1
     if (!ModbusRTUServer.begin(1, 9600)) {
         Serial.println("Failed to start Modbus RTU Server!");
@@ -27,7 +27,7 @@ void setup() {
     }
 
     // configure a single coil at address 0x00
-    ModbusRTUServer.configureInputRegisters(0x0000, 4);
+    ModbusRTUServer.configureInputRegisters(0x0000, 5);
     ModbusRTUServer.configureCoils(0x0000,6);
     //ModbusRTUServer.configureHoldingRegisters(0x0000,20);
 }
@@ -48,8 +48,14 @@ void loop() {
         ModbusRTUServer.inputRegisterWrite(kvalueHigh_address,(uint16_t)ec.kvalueHigh*100);
 
     }
+    Serial.print(calibration_cmd_enterec);
+    Serial.print(calibration_cmd_calec);
+    Serial.println(calibration_cmd_exitec);
+
     if(!calibration_cmd_enterec && !calibration_cmd_calec && !calibration_cmd_exitec)
     {
+
+
         ec.errorflag=FALSE;
         calibration_mode_enter= FALSE;
         calibration_mode_calc=FALSE;
@@ -61,13 +67,13 @@ void loop() {
     if(!calibration_run)digitalWrite(13,LOW);
     if(calibration_cmd_enterec && !calibration_mode_enter)
         {
+
         calibration_run=TRUE;
         calibration_mode_enter= TRUE;
         voltage = analogRead(EC_PIN)/1024.0*5000;
         sensor.requestTemp();
         temperature=sensor.getTemp();
-        ec.calibration_int(voltage,temperature,1);
-        calibration_cmd_enterec=0;
+        ec.calibration_int(voltage,25,1);
     }
     if(calibration_cmd_calec && calibration_mode_enter && !calibration_mode_calc)
     {
@@ -75,7 +81,7 @@ void loop() {
         voltage = analogRead(EC_PIN)/1024.0*5000;
         sensor.requestTemp();
         temperature=sensor.getTemp();
-        ec.calibration_int(voltage,temperature,2);
+        ec.calibration_int(voltage,25,2);
     }
     if(calibration_cmd_exitec && calibration_mode_enter && calibration_mode_calc && !calibration_mode_exit )
     {
@@ -83,7 +89,7 @@ void loop() {
         voltage = analogRead(EC_PIN)/1024.0*5000;
         sensor.requestTemp();
         temperature=sensor.getTemp();
-        ec.calibration_int(voltage,temperature,3);
+        ec.calibration_int(voltage,25,3);
         calibration_run=FALSE;
     }
 

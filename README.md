@@ -25,3 +25,6 @@
 5. Если получен флаг successful_address то калибровка удалась.  
 Установите флаги enterec_addres, calec_addres, exitec_addres на 0. И перейдите к следущей калибровке или к измерениям.  
 При получении флага error_address сбросить флаги enterec_addres, calec_addres, exitec_addres на 0 и повторить с попытку с пункта №1
+
+
+Измерения проводятся вне калибровки(когда флаги enterec_addres, calec_addres, exitec_addres=0)

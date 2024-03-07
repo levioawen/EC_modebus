@@ -3,7 +3,6 @@
 #include <ArduinoRS485.h>
 #include <DFRobot_EC.h>
 #include <microDS18B20.h>
-//#include <EEPROM.h>
 #include <Address_map.h>
 
 
@@ -20,7 +19,8 @@ boolean calibration_mode_calc=false;
 boolean calibration_mode_exit=false;
 
 void setup() {
-    //ec.begin();
+    //ec.begin(); //раскоментить для считывания из епром коэффицентов
+
     // start the Modbus RTU server, with (slave) id 1
     if (!ModbusRTUServer.begin(1, 9600)) {
         Serial.println("Failed to start Modbus RTU Server!");
@@ -49,9 +49,7 @@ void loop() {
         ModbusRTUServer.inputRegisterWrite(kvalueHigh_address,(uint16_t)ec.kvalueHigh*100);
 
     }
-    Serial.print(calibration_cmd_enterec);
-    Serial.print(calibration_cmd_calec);
-    Serial.println(calibration_cmd_exitec);
+
 
     if(!calibration_cmd_enterec && !calibration_cmd_calec && !calibration_cmd_exitec)
     {

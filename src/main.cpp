@@ -19,7 +19,7 @@ boolean calibration_mode_calc=false;
 boolean calibration_mode_exit=false;
 
 void setup() {
-    //ec.begin(); //раскоментить для считывания из епром коэффицентов
+    ec.begin(); //раскоментить для считывания из епром коэффицентов
 
     // start the Modbus RTU server, with (slave) id 1
     if (!ModbusRTUServer.begin(1, 9600)) {
@@ -43,7 +43,7 @@ void loop() {
         ModbusRTUServer.coilWrite(run_addres,calibration_run);
         ModbusRTUServer.coilWrite(successful_address,ec.calib_succesfull);
         ModbusRTUServer.coilWrite(error_address,ec.errorflag);
-        ModbusRTUServer.inputRegisterWrite(EC_address,ecValue*1000);  // перевод из мили в микро сименсы на куб см
+        ModbusRTUServer.inputRegisterWrite(EC_address,ecValue);  // перевод из мили в микро сименсы на куб см
         ModbusRTUServer.inputRegisterWrite(temp_address,(uint16_t)(temperature_1wire()));
         ModbusRTUServer.inputRegisterWrite(kvalueLow_address,(uint16_t)ec.kvalueLow*100); // перевод из 1.23 в 123 вид
         ModbusRTUServer.inputRegisterWrite(kvalueHigh_address,(uint16_t)ec.kvalueHigh*100);
@@ -86,7 +86,7 @@ void loop() {
     if(millis()-timepoint>1000U && !calibration_run)  //time interval: 1s
     {
         timepoint = millis();
-        ecValue =  (uint16_t)(ec.readEC(voltage_adc_ec(),temperature_1wire()));  // convert voltage to EC with temperature compensation
+        ecValue =  (uint16_t)(ec.readEC(voltage_adc_ec(),temperature_1wire())*1000);  // convert voltage to EC with temperature compensation
 
     }
 }

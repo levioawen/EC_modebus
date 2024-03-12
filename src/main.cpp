@@ -2,8 +2,9 @@
 #include <ArduinoModbus.h>
 #include <ArduinoRS485.h>
 #include <DFRobot_EC.h>
-#include <microDS18B20.h>
+//#include <microDS18B20.h>
 #include <Address_map.h>
+#include <18b20.h1>
 
 #define EC_PIN A1
 HardwareSerial Serial2(PA3, PA2);

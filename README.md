@@ -28,3 +28,6 @@
 
 
 Измерения проводятся вне калибровки(когда флаги enterec_addres, calec_addres, exitec_addres=0)
+
+
+В папке workspace_modbus_pull сохраннёное рабоче пространство win программы modbus poll. File-Openworkspace + настроить ком порт

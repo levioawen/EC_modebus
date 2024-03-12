@@ -117,7 +117,7 @@ void DFRobot_EC::calibration_int(float voltage, float temperature, int cmd)
         ecCalibration(cmd);  // if received Serial CMD from the serial monitor, enter into the calibration mode
     }
 
-boolean DFRobot_EC::cmdSerialDataAvailable()
+uint8_t DFRobot_EC::cmdSerialDataAvailable()
 {
     char cmdReceivedChar;
     static unsigned long cmdReceivedTimeOut = millis();
@@ -169,8 +169,8 @@ byte DFRobot_EC::cmdParse()
 void DFRobot_EC::ecCalibration(byte mode)
 {
     char *receivedBufferPtr;
-    static boolean ecCalibrationFinish  = 0;
-    static boolean enterCalibrationFlag = 0;
+    static uint8_t ecCalibrationFinish  = 0;
+    static uint8_t enterCalibrationFlag = 0;
     static float compECsolution;
     float KValueTemp;
     switch(mode){

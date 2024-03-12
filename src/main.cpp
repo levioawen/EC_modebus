@@ -5,21 +5,24 @@
 #include <microDS18B20.h>
 #include <Address_map.h>
 
-
 #define EC_PIN A1
-MicroDS18B20<A3> sensor;
+HardwareSerial Serial2(PA3, PA2);
+
+
+
+MicroDS18B20<01> sensor;
 float voltage_adc_ec();
 float temperature_1wire();
 uint16_t ecValue;
 DFRobot_EC ec;
 int calibration_cmd_enterec, calibration_cmd_calec, calibration_cmd_exitec;
-boolean calibration_run= false;
-boolean calibration_mode_enter=false;
-boolean calibration_mode_calc=false;
-boolean calibration_mode_exit=false;
+uint8_t calibration_run= false;
+uint8_t calibration_mode_enter=false;
+uint8_t calibration_mode_calc=false;
+uint8_t calibration_mode_exit=false;
 
 void setup() {
-    ec.begin(); //раскоментить для считывания из епром коэффицентов
+   // ec.begin(); //раскоментить для считывания из епром коэффицентов
 
     // start the Modbus RTU server, with (slave) id 1
     if (!ModbusRTUServer.begin(1, 9600)) {
@@ -36,6 +39,7 @@ void loop() {
 
 
     int packetReceived = ModbusRTUServer.poll();
+
     if(packetReceived) {
         calibration_cmd_enterec=ModbusRTUServer.coilRead(enterec_addres);
         calibration_cmd_calec=ModbusRTUServer.coilRead(calec_addres);

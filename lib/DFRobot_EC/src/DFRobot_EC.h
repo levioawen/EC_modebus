@@ -33,8 +33,8 @@ public:
     void    begin();                                                        //initialization
     float  kvalueLow;
     float  kvalueHigh;
-    boolean errorflag;
-    boolean calib_succesfull;
+    uint8_t errorflag;
+    uint8_t calib_succesfull;
 private:
     float  _ecvalue;
     float  _kvalue;
@@ -48,7 +48,7 @@ private:
     byte   _cmdReceivedBufferIndex;
 
 private:
-    boolean cmdSerialDataAvailable();
+    uint8_t cmdSerialDataAvailable();
     void    ecCalibration(byte mode); // calibration process, wirte key parameters to EEPROM
     byte    cmdParse(const char* cmd);
     byte    cmdParse();

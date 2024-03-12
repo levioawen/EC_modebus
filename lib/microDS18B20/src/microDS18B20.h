@@ -97,7 +97,6 @@ static const uint8_t PROGMEM _ds_crc8_table[] = {
 uint8_t _empDsAddr[1] = {1};
 #pragma GCC diagnostic pop
 #define DS_ADDR_MODE _empDsAddr
-
 // ====================== CLASS ======================
 template <uint8_t DS_PIN, uint8_t *DS_ADDR = (uint8_t*)nullptr, uint8_t DS_AM = 1, bool DS_PGM = 0>
 class MicroDS18B20 {

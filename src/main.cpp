@@ -2,16 +2,51 @@
 #include <ArduinoModbus.h>
 #include <ArduinoRS485.h>
 #include <DFRobot_EC.h>
-//#include <microDS18B20.h>
+#include <microDS18B20.h>
 #include <Address_map.h>
-#include <18b20.h1>
+
 
 #define EC_PIN A1
+#define TEMPERATURE_PIN 15
+/*
+Arduino pin  2 = B7
+Arduino pin  3 = B6
+Arduino pin  4 = B5
+Arduino pin  5 = B4
+Arduino pin  6 = B3
+Arduino pin  7 = A15
+Arduino pin  8 = A12
+Arduino pin  9 = A11
+Arduino pin 10 = A10
+Arduino pin 11 = A9
+Arduino pin 12 = A8
+Arduino pin 13 = B15
+Arduino pin 14 = B14
+Arduino pin 15 = B13
+Arduino pin 16 = null
+Arduino pin 17 = C13, onboard led, input only.
+Arduino pin 18 = C14
+Arduino pin 19 = C15
+Arduino pin 20 = A0
+Arduino pin 21 = A1
+Arduino pin 22 = A2
+Arduino pin 23 = A3
+Arduino pin 24 = A4
+Arduino pin 25 = A5
+Arduino pin 26 = A6
+Arduino pin 27 = A7
+Arduino pin 28 = B0
+Arduino pin 29 = B1
+Arduino pin 30 = B10
+Arduino pin 31 = B11
+
+ */
 HardwareSerial Serial2(PA3, PA2);
 
 
 
-MicroDS18B20<01> sensor;
+MicroDS18B20<TEMPERATURE_PIN> sensor;
+
 float voltage_adc_ec();
 float temperature_1wire();
 uint16_t ecValue;
@@ -49,7 +84,7 @@ void loop() {
         ModbusRTUServer.coilWrite(successful_address,ec.calib_succesfull);
         ModbusRTUServer.coilWrite(error_address,ec.errorflag);
         ModbusRTUServer.inputRegisterWrite(EC_address,ecValue);  // перевод из мили в микро сименсы на куб см
-        ModbusRTUServer.inputRegisterWrite(temp_address,(uint16_t)(temperature_1wire()));
+        ModbusRTUServer.inputRegisterWrite(temp_address,(uint16_t)(temperature_1wire()*100));
         ModbusRTUServer.inputRegisterWrite(kvalueLow_address,(uint16_t)ec.kvalueLow*100); // перевод из 1.23 в 123 вид
         ModbusRTUServer.inputRegisterWrite(kvalueHigh_address,(uint16_t)ec.kvalueHigh*100);
 

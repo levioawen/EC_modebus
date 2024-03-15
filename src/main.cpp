@@ -4,10 +4,13 @@
 #include <DFRobot_EC.h>
 #include <microDS18B20.h>
 #include <Address_map.h>
+#include <EEPROM.h>
 
+#define VREF 3300          //stm32 3.3v
+//#define VREF 5000  //arduino 5v
 
-#define EC_PIN A1
-#define TEMPERATURE_PIN 15
+#define EC_PIN PA0
+#define TEMPERATURE_PIN 15 // эта библиотека не воспринимает stm style пины, вычислить по таблице ниже
 /*
 Arduino pin  2 = B7
 Arduino pin  3 = B6
@@ -41,10 +44,9 @@ Arduino pin 30 = B10
 Arduino pin 31 = B11
 
  */
-HardwareSerial Serial2(PA3, PA2);
 
 
-
+HardwareSerial Serial2(PA3, PA2);  // сериал порт для модбас, который использует RS485.cpp.
 MicroDS18B20<TEMPERATURE_PIN> sensor;
 
 float voltage_adc_ec();
@@ -56,9 +58,9 @@ uint8_t calibration_run= false;
 uint8_t calibration_mode_enter=false;
 uint8_t calibration_mode_calc=false;
 uint8_t calibration_mode_exit=false;
-
+uint8_t a;
 void setup() {
-   // ec.begin(); //раскоментить для считывания из епром коэффицентов
+    ec.begin(); //раскоментить для считывания из епром коэффицентов
 
     // start the Modbus RTU server, with (slave) id 1
     if (!ModbusRTUServer.begin(1, 9600)) {
@@ -67,9 +69,8 @@ void setup() {
     }
 
     // configure a single coil at address 0x00
-    ModbusRTUServer.configureInputRegisters(0x0000, 5);
+    ModbusRTUServer.configureInputRegisters(0x0000, 4);
     ModbusRTUServer.configureCoils(0x0000,6);
-    //ModbusRTUServer.configureHoldingRegisters(0x0000,20);
 }
 void loop() {
 
@@ -85,8 +86,8 @@ void loop() {
         ModbusRTUServer.coilWrite(error_address,ec.errorflag);
         ModbusRTUServer.inputRegisterWrite(EC_address,ecValue);  // перевод из мили в микро сименсы на куб см
         ModbusRTUServer.inputRegisterWrite(temp_address,(uint16_t)(temperature_1wire()*100));
-        ModbusRTUServer.inputRegisterWrite(kvalueLow_address,(uint16_t)ec.kvalueLow*100); // перевод из 1.23 в 123 вид
-        ModbusRTUServer.inputRegisterWrite(kvalueHigh_address,(uint16_t)ec.kvalueHigh*100);
+        ModbusRTUServer.inputRegisterWrite(kvalueLow_address,(uint16_t)(ec.kvalueLow*100)); // перевод из 1.23 в 123 вид
+        ModbusRTUServer.inputRegisterWrite(kvalueHigh_address,(uint16_t)(ec.kvalueHigh*100));
 
     }
 
@@ -135,7 +136,7 @@ void loop() {
 float voltage_adc_ec()
 {
     float voltage;
-    voltage = float(analogRead(EC_PIN)/1024.0*5000);   // read the voltage
+    voltage = float(analogRead(EC_PIN)/1024.0*VREF);   // read the voltage
     return voltage;
 }
 

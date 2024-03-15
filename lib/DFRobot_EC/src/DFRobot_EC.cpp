@@ -57,12 +57,14 @@ DFRobot_EC::~DFRobot_EC()
 void DFRobot_EC::begin()
 {
     EEPROM_read(KVALUEADDR, this->_kvalueLow);        //read the calibrated K value from EEPROM
-    if(EEPROM.read(KVALUEADDR)==0xFF && EEPROM.read(KVALUEADDR+1)==0xFF && EEPROM.read(KVALUEADDR+2)==0xFF && EEPROM.read(KVALUEADDR+3)==0xFF){
+    if((EEPROM.read(KVALUEADDR)==0xFF && EEPROM.read(KVALUEADDR+1)==0xFF && EEPROM.read(KVALUEADDR+2)==0xFF && EEPROM.read(KVALUEADDR+3)==0xFF)||
+    (EEPROM.read(KVALUEADDR)==0x00 && EEPROM.read(KVALUEADDR+1)==0x00 && EEPROM.read(KVALUEADDR+2)==0x00 && EEPROM.read(KVALUEADDR+3)==0x00)){
         this->_kvalueLow = 1.0;                       // For new EEPROM, write default value( K = 1.0) to EEPROM
         EEPROM_write(KVALUEADDR, this->_kvalueLow);
     }
     EEPROM_read(KVALUEADDR+4, this->_kvalueHigh);     //read the calibrated K value from EEPRM
-    if(EEPROM.read(KVALUEADDR+4)==0xFF && EEPROM.read(KVALUEADDR+5)==0xFF && EEPROM.read(KVALUEADDR+6)==0xFF && EEPROM.read(KVALUEADDR+7)==0xFF){
+    if((EEPROM.read(KVALUEADDR+4)==0xFF && EEPROM.read(KVALUEADDR+5)==0xFF && EEPROM.read(KVALUEADDR+6)==0xFF && EEPROM.read(KVALUEADDR+7)==0xFF)||
+    (EEPROM.read(KVALUEADDR+4)==0x00 && EEPROM.read(KVALUEADDR+5)==0x00 && EEPROM.read(KVALUEADDR+6)==0x00 && EEPROM.read(KVALUEADDR+7)==0x00)){
         this->_kvalueHigh = 1.0;                      // For new EEPROM, write default value( K = 1.0) to EEPROM
         EEPROM_write(KVALUEADDR+4, this->_kvalueHigh);
     }

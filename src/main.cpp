@@ -2,6 +2,7 @@
 #include <ArduinoModbus.h>
 #include <ArduinoRS485.h>
 #include <DFRobot_EC.h>
+#include <DFRobot_PH.h>
 #include <microDS18B20.h>
 #include <Address_map.h>
 #include <EEPROM.h>
@@ -10,6 +11,7 @@
 //#define VREF 5000  //arduino 5v
 
 #define EC_PIN PA0
+#define PH_PIN PA1
 #define TEMPERATURE_PIN 31 // эта библиотека не воспринимает stm style пины, вычислить по таблице ниже
 /*
 Arduino pin  2 = B7
@@ -48,11 +50,13 @@ Arduino pin 31 = B11
 
 HardwareSerial Serial2(PA3, PA2);  // сериал порт для модбас, который использует RS485.cpp.
 MicroDS18B20<TEMPERATURE_PIN> sensor;
-
+DFRobot_EC ec;
+DFRobot_PH ph;
+float voltage_adc_ph();
 float voltage_adc_ec();
 float temperature_1wire();
 uint16_t ecValue;
-DFRobot_EC ec;
+uint16_t phValue;
 int calibration_cmd_enterec, calibration_cmd_calec, calibration_cmd_exitec;
 uint8_t calibration_run= false;
 uint8_t calibration_mode_enter=false;
@@ -62,16 +66,14 @@ void setup() {
 
 
 
-   ec.begin(); //раскоментить для считывания из епром коэффицентов
-
+    ec.begin(); //раскоментить для считывания из епром коэффицентов
+    ph.begin();
     // start the Modbus RTU server, with (slave) id 1
     if (!ModbusRTUServer.begin(1, 9600)) {
-
-
     }
 
     // configure a single coil at address 0x00
-    ModbusRTUServer.configureInputRegisters(0x0000, 4);
+    ModbusRTUServer.configureInputRegisters(0x0000, 7);
     ModbusRTUServer.configureCoils(0x0000,6);
 
 }
@@ -92,10 +94,14 @@ void loop() {
         ModbusRTUServer.inputRegisterWrite(temp_address,(uint16_t)(temperature_1wire()*100));
         ModbusRTUServer.inputRegisterWrite(kvalueLow_address,(uint16_t)(ec.kvalueLow*100)); // перевод из 1.23 в 123 вид
         ModbusRTUServer.inputRegisterWrite(kvalueHigh_address,(uint16_t)(ec.kvalueHigh*100));
+        ModbusRTUServer.inputRegisterWrite(PH_address,phValue);  // перевод из мили в микро сименсы на куб см
+        ModbusRTUServer.inputRegisterWrite(kvalueNeutral_address,(uint16_t)(ph.neutralVoltage*100)); // перевод из 1.23 в 123 вид
+        ModbusRTUServer.inputRegisterWrite(kvalueAcid_address,(uint16_t)(ph.acidVoltage*100));
 
     }
 
-
+    //calibration_ec();
+    //calibration_ph();
     if(!calibration_cmd_enterec && !calibration_cmd_calec && !calibration_cmd_exitec)
     {
 
@@ -131,8 +137,8 @@ void loop() {
     if(millis()-timepoint>1000U && !calibration_run)  //time interval: 1s
     {
         timepoint = millis();
-        ecValue =  (uint16_t)(ec.readEC(voltage_adc_ec(),temperature_1wire())*1000);  // convert voltage to EC with temperature compensation
-
+        ecValue = (uint16_t)(ec.readEC(voltage_adc_ec(),temperature_1wire())*1000);  // convert voltage to EC with temperature compensation
+        phValue = (uint16_t)(ph.readPH(voltage_adc_ph(),temperature_1wire())*1000);
     }
 }
 
@@ -141,6 +147,12 @@ float voltage_adc_ec()
 {
     float voltage;
     voltage = float(analogRead(EC_PIN)/1024.0*VREF);   // read the voltage
+    return voltage;
+}
+float voltage_adc_ph()
+{
+    float voltage;
+    voltage = float(analogRead(PH_PIN)/1024.0*VREF);   // read the voltage
     return voltage;
 }
 

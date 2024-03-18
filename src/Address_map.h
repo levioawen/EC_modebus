@@ -1,8 +1,11 @@
 //Input register
-#define EC_address 0x0000
-#define temp_address 0x0001
+#define temp_address 0x0000
+#define EC_address 0x0001
 #define kvalueLow_address 0x0002
 #define kvalueHigh_address 0x0003
+#define PH_address 0x0004
+#define kvalueNeutral_address 0x0005
+#define kvalueAcid_address 0x0006
 
 //Coils
 #define enterec_addres 0x0000

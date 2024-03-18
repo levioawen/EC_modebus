@@ -56,6 +56,8 @@ DFRobot_EC::~DFRobot_EC()
 
 void DFRobot_EC::begin()
 {
+
+
     EEPROM_read(KVALUEADDR, this->_kvalueLow);        //read the calibrated K value from EEPROM
     if((EEPROM.read(KVALUEADDR)==0xFF && EEPROM.read(KVALUEADDR+1)==0xFF && EEPROM.read(KVALUEADDR+2)==0xFF && EEPROM.read(KVALUEADDR+3)==0xFF)||
     (EEPROM.read(KVALUEADDR)==0x00 && EEPROM.read(KVALUEADDR+1)==0x00 && EEPROM.read(KVALUEADDR+2)==0x00 && EEPROM.read(KVALUEADDR+3)==0x00)){
@@ -69,6 +71,8 @@ void DFRobot_EC::begin()
         EEPROM_write(KVALUEADDR+4, this->_kvalueHigh);
     }
     this->_kvalue =  this->_kvalueLow;                // set default K value: K = kvalueLow
+
+
 }
 
 float DFRobot_EC::readEC(float voltage, float temperature)

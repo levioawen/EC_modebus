@@ -10,7 +10,7 @@
 //#define VREF 5000  //arduino 5v
 
 #define EC_PIN PA0
-#define TEMPERATURE_PIN 15 // эта библиотека не воспринимает stm style пины, вычислить по таблице ниже
+#define TEMPERATURE_PIN 31 // эта библиотека не воспринимает stm style пины, вычислить по таблице ниже
 /*
 Arduino pin  2 = B7
 Arduino pin  3 = B6
@@ -58,20 +58,24 @@ uint8_t calibration_run= false;
 uint8_t calibration_mode_enter=false;
 uint8_t calibration_mode_calc=false;
 uint8_t calibration_mode_exit=false;
-uint8_t a;
 void setup() {
-    ec.begin(); //раскоментить для считывания из епром коэффицентов
+
+
+
+   ec.begin(); //раскоментить для считывания из епром коэффицентов
 
     // start the Modbus RTU server, with (slave) id 1
     if (!ModbusRTUServer.begin(1, 9600)) {
-        Serial.println("Failed to start Modbus RTU Server!");
+        
 
     }
 
     // configure a single coil at address 0x00
     ModbusRTUServer.configureInputRegisters(0x0000, 4);
     ModbusRTUServer.configureCoils(0x0000,6);
+
 }
+
 void loop() {
 
 
@@ -147,4 +151,3 @@ float temperature_1wire()
     temperature=sensor.getTemp();
     return temperature;
 }
-

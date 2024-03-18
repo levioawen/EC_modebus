@@ -66,7 +66,7 @@ void setup() {
 
     // start the Modbus RTU server, with (slave) id 1
     if (!ModbusRTUServer.begin(1, 9600)) {
-        
+
 
     }
 

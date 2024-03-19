@@ -5,7 +5,7 @@
 #include <DFRobot_PH.h>
 #include <microDS18B20.h>
 #include <Address_map.h>
-#include <EEPROM.h>
+//#include <EEPROM.h>
 
 #define VREF 3300          //stm32 3.3v
 //#define VREF 5000  //arduino 5v
@@ -52,9 +52,10 @@ HardwareSerial Serial2(PA3, PA2);  // сериал порт для модбас,
 MicroDS18B20<TEMPERATURE_PIN> sensor;
 DFRobot_EC ec;
 DFRobot_PH ph;
-float voltage_adc_ph();
-float voltage_adc_ec();
+float voltage_adc(uint8_t pin);
 float temperature_1wire();
+void calibration_ec(uint8_t pin);
+void calibration_ph(uint8_t pin);
 uint16_t ecValue;
 uint16_t phValue;
 int calibration_cmd_enterec, calibration_cmd_calec, calibration_cmd_exitec;
@@ -100,8 +101,21 @@ void loop() {
 
     }
 
-    //calibration_ec();
+    calibration_ec(EC_PIN);
     //calibration_ph();
+
+
+    static unsigned long timepoint = millis();
+    if(millis()-timepoint>1000U && !calibration_run)  //time interval: 1s
+    {
+        timepoint = millis();
+        ecValue = (uint16_t)(ec.readEC(voltage_adc(EC_PIN),temperature_1wire())*1000);  // convert voltage to EC with temperature compensation
+        phValue = (uint16_t)(ph.readPH(voltage_adc(PH_PIN),temperature_1wire())*1000);
+    }
+}
+
+void calibration_ec(uint8_t pin)
+{
     if(!calibration_cmd_enterec && !calibration_cmd_calec && !calibration_cmd_exitec)
     {
 
@@ -115,46 +129,38 @@ void loop() {
     }
 
     if(calibration_cmd_enterec && !calibration_mode_enter)
-        {
+    {
 
         calibration_run=TRUE;
         calibration_mode_enter= TRUE;
-        ec.calibration_int(voltage_adc_ec(),temperature_1wire(),1);
+        ec.calibration_int(voltage_adc(pin),temperature_1wire(),1);
     }
     if(calibration_cmd_calec && calibration_mode_enter && !calibration_mode_calc)
     {
         calibration_mode_calc=TRUE;
-        ec.calibration_int(voltage_adc_ec(),temperature_1wire(),2);
+        ec.calibration_int(voltage_adc(pin),temperature_1wire(),2);
     }
     if(calibration_cmd_exitec && calibration_mode_enter && calibration_mode_calc && !calibration_mode_exit )
     {
         calibration_mode_exit=TRUE;
-        ec.calibration_int(voltage_adc_ec(),temperature_1wire(),3);
+        ec.calibration_int(voltage_adc(pin),temperature_1wire(),3);
         calibration_run=FALSE;
     }
+}
+void calibration_ph()
+{
 
-    static unsigned long timepoint = millis();
-    if(millis()-timepoint>1000U && !calibration_run)  //time interval: 1s
-    {
-        timepoint = millis();
-        ecValue = (uint16_t)(ec.readEC(voltage_adc_ec(),temperature_1wire())*1000);  // convert voltage to EC with temperature compensation
-        phValue = (uint16_t)(ph.readPH(voltage_adc_ph(),temperature_1wire())*1000);
-    }
+
 }
 
 
-float voltage_adc_ec()
+float voltage_adc(uint8_t pin)
 {
     float voltage;
-    voltage = float(analogRead(EC_PIN)/1024.0*VREF);   // read the voltage
+    voltage = float(analogRead(pin)/1024.0*VREF);
     return voltage;
 }
-float voltage_adc_ph()
-{
-    float voltage;
-    voltage = float(analogRead(PH_PIN)/1024.0*VREF);   // read the voltage
-    return voltage;
-}
+
 
 float temperature_1wire()
 {

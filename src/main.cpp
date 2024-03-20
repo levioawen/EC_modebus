@@ -147,9 +147,22 @@ void calibration_ec(uint8_t pin)
         calibration_run=FALSE;
     }
 }
-void calibration_ph()
+void calibration_ph(uint8_t pin,uint8_t step)
 {
-
+    switch( step )
+    {
+        case 0:
+            ec.errorflag=FALSE;
+            calibration_mode_enter= FALSE;
+            calibration_mode_calc=FALSE;
+            calibration_mode_exit=FALSE;
+            calibration_run=FALSE;
+            ec.calib_succesfull=FALSE;
+        case 1:
+            letter_a++;
+        default :
+            total++;
+    }
 
 }
 

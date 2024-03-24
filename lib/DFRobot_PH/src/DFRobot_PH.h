@@ -39,7 +39,15 @@ public:
    */
   void    calibration(float voltage, float temperature,char* cmd);  //calibration by Serial CMD
   void    calibration(float voltage, float temperature);
-  /**
+  void    phCalibration_acid(float voltage, float temperature);
+  void    phCalibration_neutral(float voltage, float temperature);
+  float  ph_k_valueNeutral;
+  float  ph_k_valueAcid;
+  uint8_t error_flag;
+  uint8_t calib_end_neutral;
+  uint8_t calib_end_acid;
+
+    /**
    * @fn readPH
    * @brief Convert voltage to PH with temperature compensation
    * @note voltage to pH value, with temperature compensation

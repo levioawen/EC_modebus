@@ -5,7 +5,7 @@
 #include <DFRobot_PH.h>
 #include <microDS18B20.h>
 #include <Address_map.h>
-//#include <EEPROM.h>
+#include <EEPROM.h>
 
 #define VREF 3300          //stm32 3.3v
 //#define VREF 5000  //arduino 5v
@@ -47,124 +47,131 @@ Arduino pin 31 = B11
 
  */
 
-
+#define modbus_id_eeprom 0x12
+#define modbus_baud_rate_eeprom 0x14
 HardwareSerial Serial2(PA3, PA2);  // сериал порт для модбас, который использует RS485.cpp.
 MicroDS18B20<TEMPERATURE_PIN> sensor;
 DFRobot_EC ec;
 DFRobot_PH ph;
 float voltage_adc(uint8_t pin);
-float temperature_1wire();
-void calibration_ec(uint8_t pin);
-void calibration_ph(uint8_t pin);
+float temperature(uint8_t option);
+void modbus_broadcast();
+uint8_t temperature_option;
+uint16_t temperature_mb_input;
 uint16_t ecValue;
 uint16_t phValue;
-int calibration_cmd_enterec, calibration_cmd_calec, calibration_cmd_exitec;
-uint8_t calibration_run= false;
-uint8_t calibration_mode_enter=false;
-uint8_t calibration_mode_calc=false;
-uint8_t calibration_mode_exit=false;
+uint16_t modbus_id;
+uint16_t modbus_baud_rate;
+uint8_t ec_calib_high_start;
+uint8_t ec_calib_low_start;
+uint8_t ec_calib_high_end;
+uint8_t ec_calib_low_end;
+uint8_t ec_calib_error;
+
+uint8_t ph_calib_normal_start;
+uint8_t ph_calib_acid_start;
+uint8_t ph_calib_normal_end;
+uint8_t ph_calib_acid_end;
+uint8_t ph_calib_error;
+
 void setup() {
 
+    EEPROM.get(modbus_id_eeprom,modbus_id);
+    if(modbus_id==0 || modbus_id==0xFFFF) modbus_id=1;
+    EEPROM.get(modbus_baud_rate_eeprom,modbus_baud_rate);
+    if(modbus_baud_rate==0 || modbus_baud_rate==0xFFFF) modbus_baud_rate=96;
 
 
-    ec.begin(); //раскоментить для считывания из епром коэффицентов
+    ec.begin(); //раскоментить для считывания из еeпром коэффицентов
     ph.begin();
     // start the Modbus RTU server, with (slave) id 1
-    if (!ModbusRTUServer.begin(1, 9600)) {
+    if (!ModbusRTUServer.begin(modbus_id, modbus_baud_rate*100)) {
     }
 
     // configure a single coil at address 0x00
-    ModbusRTUServer.configureInputRegisters(0x0000, 7);
-    ModbusRTUServer.configureCoils(0x0000,6);
+    ModbusRTUServer.configureInputRegisters(0x0000, 10);
+    ModbusRTUServer.configureCoils(0x0000,10);
+    ModbusRTUServer.configureHoldingRegisters(0x0000, 3);
 
 }
 
 void loop() {
 
 
-    int packetReceived = ModbusRTUServer.poll();
+    modbus_broadcast();
 
-    if(packetReceived) {
-        calibration_cmd_enterec=ModbusRTUServer.coilRead(enterec_addres);
-        calibration_cmd_calec=ModbusRTUServer.coilRead(calec_addres);
-        calibration_cmd_exitec=ModbusRTUServer.coilRead(exitec_addres);
-        ModbusRTUServer.coilWrite(run_addres,calibration_run);
-        ModbusRTUServer.coilWrite(successful_address,ec.calib_succesfull);
-        ModbusRTUServer.coilWrite(error_address,ec.errorflag);
-        ModbusRTUServer.inputRegisterWrite(EC_address,ecValue);  // перевод из мили в микро сименсы на куб см
-        ModbusRTUServer.inputRegisterWrite(temp_address,(uint16_t)(temperature_1wire()*100));
-        ModbusRTUServer.inputRegisterWrite(kvalueLow_address,(uint16_t)(ec.kvalueLow*100)); // перевод из 1.23 в 123 вид
-        ModbusRTUServer.inputRegisterWrite(kvalueHigh_address,(uint16_t)(ec.kvalueHigh*100));
-        ModbusRTUServer.inputRegisterWrite(PH_address,phValue);  // перевод из мили в микро сименсы на куб см
-        ModbusRTUServer.inputRegisterWrite(kvalueNeutral_address,(uint16_t)(ph.neutralVoltage*100)); // перевод из 1.23 в 123 вид
-        ModbusRTUServer.inputRegisterWrite(kvalueAcid_address,(uint16_t)(ph.acidVoltage*100));
-
-    }
-
-    calibration_ec(EC_PIN);
-    //calibration_ph();
 
 
     static unsigned long timepoint = millis();
-    if(millis()-timepoint>1000U && !calibration_run)  //time interval: 1s
+    if(millis()-timepoint>1000U)  //time interval: 1s
     {
         timepoint = millis();
-        ecValue = (uint16_t)(ec.readEC(voltage_adc(EC_PIN),temperature_1wire())*1000);  // convert voltage to EC with temperature compensation
-        phValue = (uint16_t)(ph.readPH(voltage_adc(PH_PIN),temperature_1wire())*1000);
+        ecValue = (uint16_t)(ec.readEC(voltage_adc(EC_PIN),temperature(temperature_option))*1000);  // convert voltage to EC with temperature compensation
+        phValue = (uint16_t)(ph.readPH(voltage_adc(PH_PIN),temperature(temperature_option))*1000);
     }
 }
 
-void calibration_ec(uint8_t pin)
+void modbus_broadcast()
 {
-    if(!calibration_cmd_enterec && !calibration_cmd_calec && !calibration_cmd_exitec)
-    {
+    int packetReceived = ModbusRTUServer.poll();
+
+    if(packetReceived) {
+
+        if(ModbusRTUServer.holdingRegisterRead(modbus_id_address) != modbus_id){
+            modbus_id=ModbusRTUServer.holdingRegisterRead(modbus_id_address);
+            EEPROM.put(modbus_id_eeprom,modbus_id);
+        }
+        if(ModbusRTUServer.holdingRegisterRead(modbus_baud_rate_address) != modbus_baud_rate) {
+            modbus_baud_rate = ModbusRTUServer.holdingRegisterRead(modbus_baud_rate_address);
+            EEPROM.put(modbus_baud_rate_eeprom,modbus_baud_rate);
+        }
+        temperature_option=ModbusRTUServer.coilRead(temperature_option_address);
+        if(temperature_option){
+            temperature_mb_input=ModbusRTUServer.holdingRegisterRead(temperature_in_out_address);
+        }
+
+        if(!temperature_mb_input){
+            ModbusRTUServer.holdingRegisterWrite(temperature_in_out_address,(uint16_t)(temperature(temperature_option)*100));
+        }
+        if(ModbusRTUServer.coilRead(ec_calib_high_start_address)){
+            ec.ecCalibration_high(voltage_adc(EC_PIN), temperature(temperature_option));
+            ModbusRTUServer.coilWrite(ec_calib_high_end_address,ec.calib_end_high);
+            ModbusRTUServer.coilWrite(ec_calib_error_address,ec.error_flag);
+            ModbusRTUServer.coilWrite(ec_calib_high_start_address,0);
+        }
+        if(ModbusRTUServer.coilRead(ec_calib_low_start_address)){
+            ec.ecCalibration_low(voltage_adc(EC_PIN), temperature(temperature_option));
+            ModbusRTUServer.coilWrite(ec_calib_low_end_address,ec.calib_end_low);
+            ModbusRTUServer.coilWrite(ec_calib_error_address,ec.error_flag);
+            ModbusRTUServer.coilWrite(ec_calib_low_start_address,0);
+        }
+        if(ModbusRTUServer.coilRead(ph_calib_neutral_start_address)){
+            ec.ecCalibration_high(voltage_adc(PH_PIN), temperature(temperature_option));
+            ModbusRTUServer.coilWrite(ph_calib_neutral_end_address,ph.calib_end_neutral);
+            ModbusRTUServer.coilWrite(ph_calib_error_address,ph.error_flag);
+            ModbusRTUServer.coilWrite(ph_calib_neutral_start_address,0);
+        }
+        if(ModbusRTUServer.coilRead(ph_calib_acid_start_address)){
+            ec.ecCalibration_low(voltage_adc(PH_PIN), temperature(temperature_option));
+            ModbusRTUServer.coilWrite(ph_calib_acid_end_address,ph.calib_end_acid);
+            ModbusRTUServer.coilWrite(ph_calib_error_address,ph.error_flag);
+            ModbusRTUServer.coilWrite(ph_calib_acid_start_address,0);
+        }
 
 
-        ec.errorflag=FALSE;
-        calibration_mode_enter= FALSE;
-        calibration_mode_calc=FALSE;
-        calibration_mode_exit=FALSE;
-        calibration_run=FALSE;
-        ec.calib_succesfull=FALSE;
-    }
 
-    if(calibration_cmd_enterec && !calibration_mode_enter)
-    {
+        ModbusRTUServer.inputRegisterWrite(ec_address,ecValue);  // перевод из мили в микро сименсы на куб см
+        ModbusRTUServer.inputRegisterWrite(ec_k_valueLow_address,(uint16_t)(ec.kvalueLow*100)); // перевод из 1.23 в 123 вид
+        ModbusRTUServer.inputRegisterWrite(ec_k_valueHigh_address,(uint16_t)(ec.kvalueHigh*100));
+        ModbusRTUServer.inputRegisterWrite(ph_address,phValue);  // перевод из мили в микро сименсы на куб см
+        ModbusRTUServer.inputRegisterWrite(ph_k_valueNeutral_address,(uint16_t)(ph.neutralVoltage*100)); // перевод из 1.23 в 123 вид
+        ModbusRTUServer.inputRegisterWrite(ph_k_valueAcid_address,(uint16_t)(ph.acidVoltage*100));
 
-        calibration_run=TRUE;
-        calibration_mode_enter= TRUE;
-        ec.calibration_int(voltage_adc(pin),temperature_1wire(),1);
-    }
-    if(calibration_cmd_calec && calibration_mode_enter && !calibration_mode_calc)
-    {
-        calibration_mode_calc=TRUE;
-        ec.calibration_int(voltage_adc(pin),temperature_1wire(),2);
-    }
-    if(calibration_cmd_exitec && calibration_mode_enter && calibration_mode_calc && !calibration_mode_exit )
-    {
-        calibration_mode_exit=TRUE;
-        ec.calibration_int(voltage_adc(pin),temperature_1wire(),3);
-        calibration_run=FALSE;
+
+
     }
 }
-void calibration_ph(uint8_t pin,uint8_t step)
-{
-    switch( step )
-    {
-        case 0:
-            ec.errorflag=FALSE;
-            calibration_mode_enter= FALSE;
-            calibration_mode_calc=FALSE;
-            calibration_mode_exit=FALSE;
-            calibration_run=FALSE;
-            ec.calib_succesfull=FALSE;
-        case 1:
-            letter_a++;
-        default :
-            total++;
-    }
 
-}
 
 
 float voltage_adc(uint8_t pin)
@@ -175,10 +182,15 @@ float voltage_adc(uint8_t pin)
 }
 
 
-float temperature_1wire()
-{
-    float temperature;
-    sensor.requestTemp();
-    temperature=sensor.getTemp();
-    return temperature;
+float temperature(uint8_t option) {
+    if (option == 0) {
+        float temperature;
+        sensor.requestTemp();
+        temperature = sensor.getTemp();
+        return temperature;
+    }
+    else if (option == 1) {
+
+        return temperature_mb_input;
+    }
 }

@@ -181,72 +181,113 @@ void DFRobot_EC::ecCalibration(byte mode)
     float KValueTemp;
     switch(mode){
         case 0:
-        if(enterCalibrationFlag){
-            this->errorflag=true;
-            //Serial.println(F(">>>Command Error<<<"));
-        }
-        break;
+            if(enterCalibrationFlag){
+                Serial.println(F(">>>Command Error<<<"));
+            }
+            break;
         case 1:
-        enterCalibrationFlag = 1;
-        ecCalibrationFinish  = 0;
-        //Serial.println();
-        //Serial.println(F(">>>Enter EC Calibration Mode<<<"));
-        //Serial.println(F(">>>Please put the probe into the 1413us/cm or 12.88ms/cm buffer solution<<<"));
-        //Serial.println();
-        break;
+            enterCalibrationFlag = 1;
+            ecCalibrationFinish  = 0;
+            Serial.println();
+            Serial.println(F(">>>Enter EC Calibration Mode<<<"));
+            Serial.println(F(">>>Please put the probe into the 1413us/cm or 12.88ms/cm buffer solution<<<"));
+            Serial.println();
+            break;
         case 2:
-        if(enterCalibrationFlag){
-            if((this->_rawEC>0.9)&&(this->_rawEC<1.9)){                         //recognize 1.413us/cm buffer solution
-                compECsolution = 1.413*(1.0+0.0185*(this->_temperature-25.0));  //temperature compensation
-            }else if((this->_rawEC>9)&&(this->_rawEC<16.8)){                    //recognize 12.88ms/cm buffer solution
-                compECsolution = 12.88*(1.0+0.0185*(this->_temperature-25.0));  //temperature compensation
-            }else{
-                //Serial.print(F(">>>Buffer Solution Error Try Again<<<   "));
-                ecCalibrationFinish = 0;
-                this->errorflag=true;
-            }
-            KValueTemp = RES2*ECREF*compECsolution/1000.0/this->_voltage;       //calibrate the k value
-            if((KValueTemp>0.5) && (KValueTemp<1.5)){
-                //Serial.println();
-                //Serial.print(F(">>>Successful,K:"));
-                //Serial.print(KValueTemp);
-                //Serial.println(F(", Send EXITEC to Save and Exit<<<"));
-                if((this->_rawEC>0.9)&&(this->_rawEC<1.9)){
-                    this->_kvalueLow =  KValueTemp;
-                }else if((this->_rawEC>9)&&(this->_rawEC<16.8)){
-                    this->_kvalueHigh =  KValueTemp;
+            if(enterCalibrationFlag){
+                if((this->_rawEC>0.9)&&(this->_rawEC<1.9)){                         //recognize 1.413us/cm buffer solution
+                    compECsolution = 1.413*(1.0+0.0185*(this->_temperature-25.0));  //temperature compensation
+                }else if((this->_rawEC>9)&&(this->_rawEC<16.8)){                    //recognize 12.88ms/cm buffer solution
+                    compECsolution = 12.88*(1.0+0.0185*(this->_temperature-25.0));  //temperature compensation
+                }else{
+                    Serial.print(F(">>>Buffer Solution Error Try Again<<<   "));
+                    ecCalibrationFinish = 0;
                 }
-                ecCalibrationFinish = 1;
-          }
-            else{
-                //Serial.println();
-                //Serial.println(F(">>>Failed,Try Again<<<"));
-                //Serial.println();
-                this->errorflag=true;
-                ecCalibrationFinish = 0;
+                KValueTemp = RES2*ECREF*compECsolution/1000.0/this->_voltage;       //calibrate the k value
+                if((KValueTemp>0.5) && (KValueTemp<1.5)){
+                    Serial.println();
+                    Serial.print(F(">>>Successful,K:"));
+                    Serial.print(KValueTemp);
+                    Serial.println(F(", Send EXITEC to Save and Exit<<<"));
+                    if((this->_rawEC>0.9)&&(this->_rawEC<1.9)){
+                        this->_kvalueLow =  KValueTemp;
+                    }else if((this->_rawEC>9)&&(this->_rawEC<16.8)){
+                        this->_kvalueHigh =  KValueTemp;
+                    }
+                    ecCalibrationFinish = 1;
+                }
+                else{
+                    Serial.println();
+                    Serial.println(F(">>>Failed,Try Again<<<"));
+                    Serial.println();
+                    ecCalibrationFinish = 0;
+                }
             }
-        }
-        break;
+            break;
         case 3:
-        if(enterCalibrationFlag){
-                //Serial.println();
-                if(ecCalibrationFinish){   
+            if(enterCalibrationFlag){
+                Serial.println();
+                if(ecCalibrationFinish){
                     if((this->_rawEC>0.9)&&(this->_rawEC<1.9)){
                         EEPROM_write(KVALUEADDR, this->_kvalueLow);
                     }else if((this->_rawEC>9)&&(this->_rawEC<16.8)){
                         EEPROM_write(KVALUEADDR+4, this->_kvalueHigh);
                     }
-                    this->calib_succesfull=true;
-                    //Serial.print(F(">>>Calibration Successful"));
+                    Serial.print(F(">>>Calibration Successful"));
                 }else{
-                    this->errorflag=true;
-                    //Serial.print(F(">>>Calibration Failed"));
+                    Serial.print(F(">>>Calibration Failed"));
                 }
-                //Serial.println(F(",Exit EC Calibration Mode<<<"));
-                //Serial.println();
+                Serial.println(F(",Exit EC Calibration Mode<<<"));
+                Serial.println();
                 ecCalibrationFinish  = 0;
                 enterCalibrationFlag = 0;
-        }
-        break;
+            }
+            break;
     }
 }
+void DFRobot_EC::ecCalibration_low(float voltage, float temperature) {
+    this->_voltage = voltage;
+    this->_temperature = temperature;
+    static float compECsolution;
+    float KValueTemp;
+    this->calib_end_low=false;
+    if ((this->_rawEC > 0.9) && (this->_rawEC < 1.9)) {                         //recognize 1.413us/cm buffer solution
+        compECsolution = 1.413 * (1.0 + 0.0185 * (this->_temperature - 25.0));  //temperature compensation
+        KValueTemp = RES2 * ECREF * compECsolution / 1000.0 / this->_voltage;       //calibrate the k value
+        if ((KValueTemp > 0.5) && (KValueTemp < 1.5)) {
+            this->_kvalueLow = KValueTemp;
+            EEPROM_write(KVALUEADDR, this->_kvalueLow);
+            this->calib_end_low=true;
+        } else {
+            this->error_flag = true;
+            this->calib_end_low=false;
+        }
+    } else {
+        this->error_flag = true;
+        this->calib_end_low=false;
+    }
+}
+void DFRobot_EC::ecCalibration_high(float voltage, float temperature) {
+    this->_voltage = voltage;
+    this->_temperature = temperature;
+    static float compECsolution;
+    float KValueTemp;
+    this->calib_end_high=false;
+    if ((this->_rawEC>9)&&(this->_rawEC<16.8)) {                         //recognize 1.413us/cm buffer solution
+        compECsolution = 12.88*(1.0+0.0185*(this->_temperature-25.0));  //temperature compensation
+        KValueTemp = RES2 * ECREF * compECsolution / 1000.0 / this->_voltage;       //calibrate the k value
+        if ((KValueTemp > 0.5) && (KValueTemp < 1.5)) {
+            this->_kvalueHigh =  KValueTemp;
+            EEPROM_write(KVALUEADDR+4, this->_kvalueHigh);
+            this->calib_end_high=true;
+        } else {
+            this->error_flag = true;
+            this->calib_end_high=false;
+        }
+    } else {
+        this->error_flag = true;
+        this->calib_end_high=false;
+    }
+}
+
+

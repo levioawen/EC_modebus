@@ -215,3 +215,32 @@ void DFRobot_PH::phCalibration(byte mode)
         break;
     }
 }
+
+void DFRobot_PH::phCalibration_neutral(float voltage, float temperature) {
+    this->_voltage = voltage;
+    this->_temperature = temperature;
+    this->error_flag = false;
+    this->calib_end_neutral=false;
+    if((this->_voltage>1322)&&(this->_voltage<1678)){        // buffer solution:7.0
+        this->_neutralVoltage =  this->_voltage;
+        EEPROM_write(PHVALUEADDR, this->_neutralVoltage);
+        this->calib_end_neutral=true;
+       } else {
+        this->error_flag = true;
+        this->calib_end_neutral=false;
+    }
+}
+void DFRobot_PH::phCalibration_acid(float voltage, float temperature) {
+    this->_voltage = voltage;
+    this->_temperature = temperature;
+    this->error_flag = false;
+    this->calib_end_acid=false;
+    if((this->_voltage>1854)&&(this->_voltage<2210)){         //buffer solution:4.0
+        this->_acidVoltage =  this->_voltage;
+        EEPROM_write(PHVALUEADDR+4, this->_acidVoltage);
+        this->calib_end_acid=true;
+    } else {
+        this->error_flag = true;
+        this->calib_end_acid=false;
+    }
+}

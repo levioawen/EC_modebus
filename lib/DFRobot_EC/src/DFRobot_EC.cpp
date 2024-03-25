@@ -251,9 +251,10 @@ void DFRobot_EC::ecCalibration_low(float voltage, float temperature) {
     static float compECsolution;
     float KValueTemp;
     this->calib_end_low=false;
+    this->_rawEC = 1000*voltage/RES2/ECREF;
     if ((this->_rawEC > 0.9) && (this->_rawEC < 1.9)) {                         //recognize 1.413us/cm buffer solution
         compECsolution = 1.413 * (1.0 + 0.0185 * (this->_temperature - 25.0));  //temperature compensation
-        KValueTemp = RES2 * ECREF * compECsolution / 1000.0 / this->_voltage;       //calibrate the k value
+        KValueTemp = RES2 * ECREF * compECsolution / 1000.0 / voltage;       //calibrate the k value
         if ((KValueTemp > 0.5) && (KValueTemp < 1.5)) {
             this->_kvalueLow = KValueTemp;
             EEPROM_write(KVALUEADDR, this->_kvalueLow);
@@ -273,6 +274,7 @@ void DFRobot_EC::ecCalibration_high(float voltage, float temperature) {
     static float compECsolution;
     float KValueTemp;
     this->calib_end_high=false;
+    this->_rawEC = 1000*voltage/RES2/ECREF;
     if ((this->_rawEC>9)&&(this->_rawEC<16.8)) {                         //recognize 1.413us/cm buffer solution
         compECsolution = 12.88*(1.0+0.0185*(this->_temperature-25.0));  //temperature compensation
         KValueTemp = RES2 * ECREF * compECsolution / 1000.0 / this->_voltage;       //calibrate the k value

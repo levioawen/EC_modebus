@@ -24,6 +24,6 @@
 #define ph_calib_acid_end_address 0x0013
 #define ph_calib_error_address 0x0019
 
-#define temperature_option_address 0x0021
+#define temperature_option_address 0x0020
 
 

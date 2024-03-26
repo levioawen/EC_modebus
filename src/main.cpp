@@ -13,7 +13,7 @@
 #define adressUserLastFlashPage 0x08010000      // Page 127 flash memory
 #define EC_PIN PA0
 #define PH_PIN PA1
-#define TEMPERATURE_PIN 31 // эта библиотека не воспринимает stm style пины, вычислить по таблице ниже
+#define TEMPERATURE_PIN 2 // эта библиотека не воспринимает stm style пины, вычислить по таблице ниже
 /*
 Arduino pin  2 = B7
 Arduino pin  3 = B6
@@ -50,7 +50,7 @@ Arduino pin 31 = B11
 
 #define modbus_id_eeprom 0x00
 #define modbus_baud_rate_eeprom 0x22
-HardwareSerial Serial2(PA3, PA2);  // сериал порт для модбас, который использует RS485.cpp.
+HardwareSerial Serial2(PA10, PA9);  // сериал порт для модбас, который использует RS485.cpp.
 MicroDS18B20<TEMPERATURE_PIN> sensor;
 DFRobot_EC ec;
 DFRobot_PH ph;

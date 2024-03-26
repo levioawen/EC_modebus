@@ -47,6 +47,9 @@ public:
   uint8_t calib_end_neutral;
   uint8_t calib_end_acid;
 
+    float  _acidVoltage;
+    float  _neutralVoltage;
+
     /**
    * @fn readPH
    * @brief Convert voltage to PH with temperature compensation
@@ -67,8 +70,7 @@ public:
 
 private:
     float  _phValue;
-    float  _acidVoltage;
-    float  _neutralVoltage;
+
     float  _voltage;
     float  _temperature;
 

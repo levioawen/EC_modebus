@@ -77,8 +77,7 @@ void DFRobot_EC::begin()
 
 float DFRobot_EC::readEC(float voltage, float temperature)
 {
-    this->kvalueLow=this->_kvalueLow;
-    this->kvalueHigh=this->_kvalueHigh;
+
     float value = 0,valueTemp = 0;
     this->_rawEC = 1000*voltage/RES2/ECREF;
     valueTemp = this->_rawEC * this->_kvalue;

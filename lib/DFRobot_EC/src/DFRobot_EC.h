@@ -34,16 +34,15 @@ public:
     void ecCalibration_low(float voltage, float temperature);
     void ecCalibration_high(float voltage, float temperature);
 
-    float  kvalueLow;
-    float  kvalueHigh;
     uint8_t error_flag;
     uint8_t calib_end_low;
     uint8_t calib_end_high;
+    float  _kvalueLow;
+    float  _kvalueHigh;
 private:
     float  _ecvalue;
     float  _kvalue;
-    float  _kvalueLow;
-    float  _kvalueHigh;
+
     float  _voltage;
     float  _temperature;
     float  _rawEC;

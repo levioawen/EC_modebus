@@ -25,6 +25,13 @@
 #define ph_calib_error_address 19
 
 #define temperature_option_address 20
-#define write_flash_address 21
+#define reboot_address 21
 
+
+
+//EEPROM ADRESS
+//in DFRobot_PH.c #define PHVALUEADDR 0x00
+//in DFRobot_EC.c #define KVALUEADDR 0x0A
+#define modbus_id_eeprom 0x14
+#define modbus_baud_rate_eeprom 0x16
 

@@ -7,10 +7,10 @@
 #include <Address_map.h>
 #include <EEPROM.h>
 #include <stm32f1xx_ll_utils.h>
-//#include <flash.h>
+
 #define VREF 3300          //stm32 3.3v
 //#define VREF 5000  //arduino 5v
-#define adressUserLastFlashPage 0x08010000      // Page 127 flash memory
+#define RESET_MB_PIN PA4
 #define EC_PIN PA0
 #define PH_PIN PA1
 #define TEMPERATURE_PIN 2 // эта библиотека не воспринимает stm style пины, вычислить по таблице ниже
@@ -48,22 +48,21 @@ Arduino pin 31 = B11
 
  */
 
-#define modbus_id_eeprom 0x00
-#define modbus_baud_rate_eeprom 0x22
-HardwareSerial Serial2(PA10, PA9);  // сериал порт для модбас, который использует RS485.cpp.
+HardwareSerial Serial2(PA3, PA2);  // сериал порт для модбас, который использует RS485.cpp.
+
+//HardwareSerial Serial2(PA10, PA9);  // сериал порт для модбас, который использует RS485.cpp.
 MicroDS18B20<TEMPERATURE_PIN> sensor;
 DFRobot_EC ec;
 DFRobot_PH ph;
 float voltage_adc(uint8_t pin);
 float temperature(uint8_t option);
-void ReadFlashData();
-void WriteFlashData();
 void modbus_broadcast();
 uint8_t temperature_option;
 uint16_t temperature_mb_input;
 uint16_t ecValue;
 uint16_t phValue;
-uint32_t modbus_id;
+uint16_t modbus_id;
+
 uint32_t modbus_baud_rate;
 uint8_t ec_calib_high_start;
 uint8_t ec_calib_low_start;
@@ -83,14 +82,31 @@ float ph_k_valueNeutral;
 float ph_k_valueAcid;
 
 void setup() {
-   // ReadFlashData();
-    modbus_id = 20;
-    modbus_baud_rate = 9600;
-    ec._kvalueHigh = 1;
-    ec._kvalueLow = 1;
-    //ph._acidVoltage = 1;
-    //ph._neutralVoltage = 1;
-    // start the Modbus RTU server, with (slave) id 1
+    pinMode(RESET_MB_PIN, INPUT_PULLUP);
+    if(!digitalRead(RESET_MB_PIN)){
+        modbus_id=10;
+        modbus_baud_rate=9600;
+        for(int i=0;i<0x14;i++){
+            EEPROM.put(i,0xFF);
+        }
+        EEPROM.put(modbus_id_eeprom,modbus_id);
+        EEPROM.put(modbus_baud_rate_eeprom,modbus_baud_rate);
+    }
+
+
+    EEPROM.get(modbus_id_eeprom,modbus_id);
+    if(modbus_id>255 || modbus_id==0){
+        modbus_id=10;
+        EEPROM.put(modbus_id_eeprom,modbus_id);
+    }
+    EEPROM.get(modbus_baud_rate_eeprom,modbus_baud_rate);
+    if(!(modbus_baud_rate==4800 || modbus_baud_rate==9600 || modbus_baud_rate==19200 || modbus_baud_rate==38400 || modbus_baud_rate==57600 || modbus_baud_rate==115200)){
+        modbus_baud_rate=9600;
+        EEPROM.put(modbus_baud_rate_eeprom,modbus_baud_rate);
+    }
+
+    ph.begin();
+    ec.begin();
     if (!ModbusRTUServer.begin(uint16_t (modbus_id), modbus_baud_rate)) {
     }
 
@@ -127,25 +143,25 @@ void modbus_broadcast()
         uint32_t new_modbus_modbus_baud_rate;
 
         new_modbus_id=ModbusRTUServer.holdingRegisterRead(modbus_id_address);
-        if(new_modbus_id !=0 && new_modbus_id != modbus_id){
-            modbus_id=new_modbus_id;
+        if(new_modbus_id !=0){
+            EEPROM.put(modbus_id_eeprom,uint16_t(new_modbus_id));
         }
 
-        new_modbus_modbus_baud_rate=ModbusRTUServer.holdingRegisterRead(modbus_id_address);
-        if(new_modbus_modbus_baud_rate !=0 && new_modbus_modbus_baud_rate != modbus_baud_rate){
-            modbus_baud_rate=new_modbus_modbus_baud_rate;
+        new_modbus_modbus_baud_rate=ModbusRTUServer.holdingRegisterRead(modbus_baud_rate_address)*100;
+        if(new_modbus_modbus_baud_rate !=0){
+            EEPROM.put(modbus_baud_rate_eeprom,new_modbus_modbus_baud_rate);
         }
-
-        if(ModbusRTUServer.coilRead(write_flash_address)==1){
-          //   WriteFlashData();
-            ModbusRTUServer.coilWrite(write_flash_address,0);
+        if(ModbusRTUServer.coilRead(reboot_address)){
+            NVIC_SystemReset();
         }
         if(ModbusRTUServer.coilRead(temperature_option_address)){
+            temperature_option=1;
             temperature_mb_input=ModbusRTUServer.holdingRegisterRead(temperature_in_out_address);
-        };
+        }
         if(!ModbusRTUServer.coilRead(temperature_option_address)){
+            temperature_option=0;
             ModbusRTUServer.holdingRegisterWrite(temperature_in_out_address,(uint16_t)(temperature(temperature_option)*100));
-        };
+        }
 
         if(ModbusRTUServer.coilRead(ec_calib_high_start_address)){
             ec.ecCalibration_high(voltage_adc(EC_PIN), temperature(temperature_option));
@@ -211,65 +227,3 @@ float temperature(uint8_t option) {
     }
     return temperature;
 }
-/*
-uint32_t ReadFlash(uint32_t address) {
-    return (READ_REG(*((uint32_t* )(address))));
-}
-
-void ReadFlashData() {
-    uint32_t temp_uint32;
-    modbus_id = ReadFlash(adressUserLastFlashPage);
-    modbus_baud_rate = ReadFlash(adressUserLastFlashPage + 4);
-    temp_uint32 = ReadFlash(adressUserLastFlashPage + 8);
-    ec._kvalueHigh = *(float*) &temp_uint32;
-    temp_uint32 = ReadFlash(adressUserLastFlashPage + 12);
-    ec._kvalueLow = *(float*) &temp_uint32;
-    temp_uint32 = ReadFlash(adressUserLastFlashPage + 16);
-    ph._acidVoltage = *(float*) &temp_uint32;
-    temp_uint32 = ReadFlash(adressUserLastFlashPage + 20);
-    ph._neutralVoltage = *(float*) &temp_uint32;
-    if (modbus_id>255 ) // if memory clear, set default
-    {
-        modbus_id = 1;
-        modbus_baud_rate = 9600;
-        ec._kvalueHigh = 1;
-        ec._kvalueLow = 1;
-        ph._acidVoltage = 1;
-        ph._neutralVoltage = 1;
-        WriteFlashData();
-    }
-}
-
-void WriteFlashData() {
-
-    FLASH_EraseInitTypeDef EraseInitStruct;
-    uint32_t PAGEError = 0;
-    EraseInitStruct.TypeErase = FLASH_TYPEERASE_PAGES;
-    EraseInitStruct.PageAddress = adressUserLastFlashPage;
-    EraseInitStruct.NbPages = 1;
-    HAL_FLASH_Unlock(); //
-    FLASH_WaitForLastOperation(500); // 
-    HAL_FLASHEx_Erase(&EraseInitStruct, &PAGEError);
-    FLASH_WaitForLastOperation(500); // 
-    if (PAGEError == 0xFFFFFFFF) {
-        HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, adressUserLastFlashPage,
-                          modbus_id);
-        FLASH_WaitForLastOperation(500);
-        HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, adressUserLastFlashPage + 4,
-                          modbus_baud_rate);
-        HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, adressUserLastFlashPage + 8,
-                          *(uint32_t*) &ec._kvalueHigh);
-        HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, adressUserLastFlashPage + 12,
-                          *(uint32_t*) &ec._kvalueLow);
-        HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, adressUserLastFlashPage + 16,
-                          *(uint32_t*) &ph._acidVoltage);
-        HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, adressUserLastFlashPage + 20,
-                          *(uint32_t*) &ph._neutralVoltage);
-        FLASH_WaitForLastOperation(500);
-
-
-    }
-    HAL_FLASH_Lock();
-    FLASH_WaitForLastOperation(500);
-}
-*/

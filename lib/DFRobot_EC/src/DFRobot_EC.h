@@ -31,15 +31,18 @@ public:
     void    calibration_int(float voltage, float temperature,int cmd);      //calibration by int command
     float   readEC(float voltage, float temperature);                       // voltage to EC value, with temperature compensation
     void    begin();                                                        //initialization
-    float  kvalueLow;
-    float  kvalueHigh;
-    boolean errorflag;
-    boolean calib_succesfull;
+    void ecCalibration_low(float voltage, float temperature);
+    void ecCalibration_high(float voltage, float temperature);
+
+    uint8_t error_flag;
+    uint8_t calib_end_low;
+    uint8_t calib_end_high;
+    float  _kvalueLow;
+    float  _kvalueHigh;
 private:
     float  _ecvalue;
     float  _kvalue;
-    float  _kvalueLow;
-    float  _kvalueHigh;
+
     float  _voltage;
     float  _temperature;
     float  _rawEC;
@@ -48,11 +51,13 @@ private:
     byte   _cmdReceivedBufferIndex;
 
 private:
-    boolean cmdSerialDataAvailable();
     void    ecCalibration(byte mode); // calibration process, wirte key parameters to EEPROM
+
+    uint8_t cmdSerialDataAvailable();
     byte    cmdParse(const char* cmd);
     byte    cmdParse();
 	char* strupr(char* str);
+
 };
 
 #endif

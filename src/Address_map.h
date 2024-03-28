@@ -1,13 +1,37 @@
 //Input register
-#define EC_address 0x0000
-#define temp_address 0x0001
-#define kvalueLow_address 0x0002
-#define kvalueHigh_address 0x0003
 
+#define ec_address 0
+#define ec_k_valueLow_address 1
+#define ec_k_valueHigh_address 2
+#define ph_address 10
+#define ph_k_valueNeutral_address 11
+#define ph_k_valueAcid_address 12
+
+//Holding register
+#define temperature_in_out_address 0
+#define modbus_id_address 1
+#define modbus_baud_rate_address 2
 //Coils
-#define enterec_addres 0x0000
-#define calec_addres 0x0001
-#define exitec_addres 0x0002
-#define run_addres 0x0003
-#define successful_address 0x0004
-#define error_address 0x0005
+#define ec_calib_high_start_address 0
+#define ec_calib_low_start_address 1
+#define ec_calib_high_end_address 2
+#define ec_calib_low_end_address 3
+#define ec_calib_error_address 4
+
+#define ph_calib_neutral_start_address 10
+#define ph_calib_acid_start_address 11
+#define ph_calib_neutral_end_address 12
+#define ph_calib_acid_end_address 13
+#define ph_calib_error_address 19
+
+#define temperature_option_address 20
+#define reboot_address 21
+
+
+
+//EEPROM ADRESS
+//in DFRobot_PH.c #define PHVALUEADDR 0x00
+//in DFRobot_EC.c #define KVALUEADDR 0x0A
+#define modbus_id_eeprom 0x14
+#define modbus_baud_rate_eeprom 0x16
+

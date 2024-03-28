@@ -21,6 +21,7 @@
 #include "DFRobot_EC.h"
 #include <EEPROM.h>
 
+
 #define EEPROM_write(address, p) {int i = 0; byte *pp = (byte*)&(p);for(; i < sizeof(p); i++) EEPROM.write(address+i, pp[i]);}
 #define EEPROM_read(address, p)  {int i = 0; byte *pp = (byte*)&(p);for(; i < sizeof(p); i++) pp[i]=EEPROM.read(address+i);}
 
@@ -56,23 +57,28 @@ DFRobot_EC::~DFRobot_EC()
 
 void DFRobot_EC::begin()
 {
+
+
     EEPROM_read(KVALUEADDR, this->_kvalueLow);        //read the calibrated K value from EEPROM
-    if(EEPROM.read(KVALUEADDR)==0xFF && EEPROM.read(KVALUEADDR+1)==0xFF && EEPROM.read(KVALUEADDR+2)==0xFF && EEPROM.read(KVALUEADDR+3)==0xFF){
+    if((EEPROM.read(KVALUEADDR)==0xFF && EEPROM.read(KVALUEADDR+1)==0xFF && EEPROM.read(KVALUEADDR+2)==0xFF && EEPROM.read(KVALUEADDR+3)==0xFF)||
+    (EEPROM.read(KVALUEADDR)==0x00 && EEPROM.read(KVALUEADDR+1)==0x00 && EEPROM.read(KVALUEADDR+2)==0x00 && EEPROM.read(KVALUEADDR+3)==0x00)){
         this->_kvalueLow = 1.0;                       // For new EEPROM, write default value( K = 1.0) to EEPROM
         EEPROM_write(KVALUEADDR, this->_kvalueLow);
     }
     EEPROM_read(KVALUEADDR+4, this->_kvalueHigh);     //read the calibrated K value from EEPRM
-    if(EEPROM.read(KVALUEADDR+4)==0xFF && EEPROM.read(KVALUEADDR+5)==0xFF && EEPROM.read(KVALUEADDR+6)==0xFF && EEPROM.read(KVALUEADDR+7)==0xFF){
+    if((EEPROM.read(KVALUEADDR+4)==0xFF && EEPROM.read(KVALUEADDR+5)==0xFF && EEPROM.read(KVALUEADDR+6)==0xFF && EEPROM.read(KVALUEADDR+7)==0xFF)||
+    (EEPROM.read(KVALUEADDR+4)==0x00 && EEPROM.read(KVALUEADDR+5)==0x00 && EEPROM.read(KVALUEADDR+6)==0x00 && EEPROM.read(KVALUEADDR+7)==0x00)){
         this->_kvalueHigh = 1.0;                      // For new EEPROM, write default value( K = 1.0) to EEPROM
         EEPROM_write(KVALUEADDR+4, this->_kvalueHigh);
     }
     this->_kvalue =  this->_kvalueLow;                // set default K value: K = kvalueLow
+
+
 }
 
 float DFRobot_EC::readEC(float voltage, float temperature)
 {
-    this->kvalueLow=this->_kvalueLow;
-    this->kvalueHigh=this->_kvalueHigh;
+
     float value = 0,valueTemp = 0;
     this->_rawEC = 1000*voltage/RES2/ECREF;
     valueTemp = this->_rawEC * this->_kvalue;
@@ -117,7 +123,7 @@ void DFRobot_EC::calibration_int(float voltage, float temperature, int cmd)
         ecCalibration(cmd);  // if received Serial CMD from the serial monitor, enter into the calibration mode
     }
 
-boolean DFRobot_EC::cmdSerialDataAvailable()
+uint8_t DFRobot_EC::cmdSerialDataAvailable()
 {
     char cmdReceivedChar;
     static unsigned long cmdReceivedTimeOut = millis();
@@ -169,78 +175,121 @@ byte DFRobot_EC::cmdParse()
 void DFRobot_EC::ecCalibration(byte mode)
 {
     char *receivedBufferPtr;
-    static boolean ecCalibrationFinish  = 0;
-    static boolean enterCalibrationFlag = 0;
+    static uint8_t ecCalibrationFinish  = 0;
+    static uint8_t enterCalibrationFlag = 0;
     static float compECsolution;
     float KValueTemp;
     switch(mode){
         case 0:
-        if(enterCalibrationFlag){
-            this->errorflag=true;
-            //Serial.println(F(">>>Command Error<<<"));
-        }
-        break;
+            if(enterCalibrationFlag){
+                Serial.println(F(">>>Command Error<<<"));
+            }
+            break;
         case 1:
-        enterCalibrationFlag = 1;
-        ecCalibrationFinish  = 0;
-        //Serial.println();
-        //Serial.println(F(">>>Enter EC Calibration Mode<<<"));
-        //Serial.println(F(">>>Please put the probe into the 1413us/cm or 12.88ms/cm buffer solution<<<"));
-        //Serial.println();
-        break;
+            enterCalibrationFlag = 1;
+            ecCalibrationFinish  = 0;
+            Serial.println();
+            Serial.println(F(">>>Enter EC Calibration Mode<<<"));
+            Serial.println(F(">>>Please put the probe into the 1413us/cm or 12.88ms/cm buffer solution<<<"));
+            Serial.println();
+            break;
         case 2:
-        if(enterCalibrationFlag){
-            if((this->_rawEC>0.9)&&(this->_rawEC<1.9)){                         //recognize 1.413us/cm buffer solution
-                compECsolution = 1.413*(1.0+0.0185*(this->_temperature-25.0));  //temperature compensation
-            }else if((this->_rawEC>9)&&(this->_rawEC<16.8)){                    //recognize 12.88ms/cm buffer solution
-                compECsolution = 12.88*(1.0+0.0185*(this->_temperature-25.0));  //temperature compensation
-            }else{
-                //Serial.print(F(">>>Buffer Solution Error Try Again<<<   "));
-                ecCalibrationFinish = 0;
-                this->errorflag=true;
-            }
-            KValueTemp = RES2*ECREF*compECsolution/1000.0/this->_voltage;       //calibrate the k value
-            if((KValueTemp>0.5) && (KValueTemp<1.5)){
-                //Serial.println();
-                //Serial.print(F(">>>Successful,K:"));
-                //Serial.print(KValueTemp);
-                //Serial.println(F(", Send EXITEC to Save and Exit<<<"));
-                if((this->_rawEC>0.9)&&(this->_rawEC<1.9)){
-                    this->_kvalueLow =  KValueTemp;
-                }else if((this->_rawEC>9)&&(this->_rawEC<16.8)){
-                    this->_kvalueHigh =  KValueTemp;
+            if(enterCalibrationFlag){
+                if((this->_rawEC>0.9)&&(this->_rawEC<1.9)){                         //recognize 1.413us/cm buffer solution
+                    compECsolution = 1.413*(1.0+0.0185*(this->_temperature-25.0));  //temperature compensation
+                }else if((this->_rawEC>9)&&(this->_rawEC<16.8)){                    //recognize 12.88ms/cm buffer solution
+                    compECsolution = 12.88*(1.0+0.0185*(this->_temperature-25.0));  //temperature compensation
+                }else{
+                    Serial.print(F(">>>Buffer Solution Error Try Again<<<   "));
+                    ecCalibrationFinish = 0;
                 }
-                ecCalibrationFinish = 1;
-          }
-            else{
-                //Serial.println();
-                //Serial.println(F(">>>Failed,Try Again<<<"));
-                //Serial.println();
-                this->errorflag=true;
-                ecCalibrationFinish = 0;
+                KValueTemp = RES2*ECREF*compECsolution/1000.0/this->_voltage;       //calibrate the k value
+                if((KValueTemp>0.5) && (KValueTemp<1.5)){
+                    Serial.println();
+                    Serial.print(F(">>>Successful,K:"));
+                    Serial.print(KValueTemp);
+                    Serial.println(F(", Send EXITEC to Save and Exit<<<"));
+                    if((this->_rawEC>0.9)&&(this->_rawEC<1.9)){
+                        this->_kvalueLow =  KValueTemp;
+                    }else if((this->_rawEC>9)&&(this->_rawEC<16.8)){
+                        this->_kvalueHigh =  KValueTemp;
+                    }
+                    ecCalibrationFinish = 1;
+                }
+                else{
+                    Serial.println();
+                    Serial.println(F(">>>Failed,Try Again<<<"));
+                    Serial.println();
+                    ecCalibrationFinish = 0;
+                }
             }
-        }
-        break;
+            break;
         case 3:
-        if(enterCalibrationFlag){
-                //Serial.println();
-                if(ecCalibrationFinish){   
+            if(enterCalibrationFlag){
+                Serial.println();
+                if(ecCalibrationFinish){
                     if((this->_rawEC>0.9)&&(this->_rawEC<1.9)){
                         EEPROM_write(KVALUEADDR, this->_kvalueLow);
                     }else if((this->_rawEC>9)&&(this->_rawEC<16.8)){
                         EEPROM_write(KVALUEADDR+4, this->_kvalueHigh);
                     }
-                    this->calib_succesfull=true;
-                    //Serial.print(F(">>>Calibration Successful"));
+                    Serial.print(F(">>>Calibration Successful"));
                 }else{
-                    this->errorflag=true;
-                    //Serial.print(F(">>>Calibration Failed"));
+                    Serial.print(F(">>>Calibration Failed"));
                 }
-                //Serial.println(F(",Exit EC Calibration Mode<<<"));
-                //Serial.println();
+                Serial.println(F(",Exit EC Calibration Mode<<<"));
+                Serial.println();
                 ecCalibrationFinish  = 0;
                 enterCalibrationFlag = 0;
-        }
-        break;
+            }
+            break;
     }
 }
+void DFRobot_EC::ecCalibration_low(float voltage, float temperature) {
+    this->_voltage = voltage;
+    this->_temperature = temperature;
+    static float compECsolution;
+    float KValueTemp;
+    this->calib_end_low=false;
+    this->_rawEC = 1000*voltage/RES2/ECREF;
+    if ((this->_rawEC > 0.9) && (this->_rawEC < 1.9)) {                         //recognize 1.413us/cm buffer solution
+        compECsolution = 1.413 * (1.0 + 0.0185 * (this->_temperature - 25.0));  //temperature compensation
+        KValueTemp = RES2 * ECREF * compECsolution / 1000.0 / voltage;       //calibrate the k value
+        if ((KValueTemp > 0.5) && (KValueTemp < 1.5)) {
+            this->_kvalueLow = KValueTemp;
+            EEPROM_write(KVALUEADDR, this->_kvalueLow);
+            this->calib_end_low=true;
+        } else {
+            this->error_flag = true;
+            this->calib_end_low=false;
+        }
+    } else {
+        this->error_flag = true;
+        this->calib_end_low=false;
+    }
+}
+void DFRobot_EC::ecCalibration_high(float voltage, float temperature) {
+    this->_voltage = voltage;
+    this->_temperature = temperature;
+    static float compECsolution;
+    float KValueTemp;
+    this->calib_end_high=false;
+    this->_rawEC = 1000*voltage/RES2/ECREF;
+    if ((this->_rawEC>9)&&(this->_rawEC<16.8)) {                         //recognize 1.413us/cm buffer solution
+        compECsolution = 12.88*(1.0+0.0185*(this->_temperature-25.0));  //temperature compensation
+        KValueTemp = RES2 * ECREF * compECsolution / 1000.0 / this->_voltage;       //calibrate the k value
+        if ((KValueTemp > 0.5) && (KValueTemp < 1.5)) {
+            this->_kvalueHigh =  KValueTemp;
+            EEPROM_write(KVALUEADDR+4, this->_kvalueHigh);
+            this->calib_end_high=true;
+        } else {
+            this->error_flag = true;
+            this->calib_end_high=false;
+        }
+    } else {
+        this->error_flag = true;
+        this->calib_end_high=false;
+    }
+}
+
+

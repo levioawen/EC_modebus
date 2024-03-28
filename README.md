@@ -35,30 +35,19 @@
 Эти регистры доступны  для чтения и записи
 | Имя   |      Адрес hex(dec)      |  Множитель | Пояснение |
 |----------|:-------------:|------:|------:|
-|ec_calib_high_start_address|0x0000(0)| 1 | Значение с датчика EC в uS/cm
-|ec_calib_low_start_address| 0x0001(1) | 1| Коэффициент для низкого раствора
-|ec_calib_high_successful_address| 0x0002(2) | 1| Коэффициент для насыщеного раствора
-|ec_calib_low_successful_address| 0x0003(3)|  1| Значение с датчика PH раствора (0-14)
-|ph_calib_normal_start_address|0x0000(0)| 1 | Значение с датчика EC в uS/cm
-|ph_calib_acid_start_address| 0x0001(1) | 1| Коэффициент для низкого раствора
-|ph_calib_normal_successful_address| 0x0002(2) | 1| Коэффициент для насыщеного раствора
-|ph_calib_acid_successful_address| 0x000A(10)|  1| Значение с датчика PH раствора (0-14)
-|ph_calib_error_address| 0x000B(11)  |1| Коэффициент для нейтрального раствора
+|ec_calib_high_start_address|0x0000(0)| 1 (writable)| Запуск калибровки EC на насыщенном растворе
+|ec_calib_low_start_address| 0x0001(1) | 1(writable)| Запуск калибровки EC на слабом растворе
+|ec_calib_high_successful_address| 0x0002(2) | 1(readable)| Успешная калибровка ЕС на насыщенном растворе
+|ec_calib_low_successful_address| 0x0003(3)|  1(readable)| Успешная калибровка ЕС на слабом растворе
+|ec_calib_error_address| 0x0009(9)  |1(readable)| Ошибка калибровки ЕС 
+|ph_calib_normal_start_address|0x000A(10)| 1 (writable)| Запуск калибровки PH на нормальном растворе
+|ec_calib_low_start_address| 0x000B(11) | 1(writable)| Запуск калибровки PH на кислом растворе
+|ec_calib_high_successful_address| 0x000C(12) | 1(readable)| Успешная калибровка PH на нормальном растворе
+|ec_calib_low_successful_address| 0x000D(13)|  1(readable)| Успешная калибровка PH на кислом растворе
+|ec_calib_error_address| 0x0013(19)  |1(readable)| Ошибка калибровки PH 
+|temperature_option_address| 0x0014(20)|  1(writable)| Опция датчика температуры (при 0, используется внутренний датчик DS18B20, при 1 используется данные передаваемые в датчик по ModBus в регистр temperature_in_out_address)
+|reboot_address| 0x0015(21)  |1(writable)| Перезагрузка устройства 
 
-#define ec_calib_high_start_address 0x0000
-#define ec_calib_low_start_address 0x0001
-#define ec_calib_high_successful_address 0x0002
-#define ec_calib_low_successful_address 0x0003
-#define ec_calib_error_address 0x0009
-
-#define ph_calib_normal_start_address 0x0010
-#define ph_calib_acid_start_address 0x0011
-#define ph_calib_normal_successful_address 0x0011
-#define ph_calib_acid_successful_address 0x0012
-#define ph_calib_error_address 0x0019
-
-#define calib_run_address 0x0020
-#define temperature_option_address 0x0021
 ```
 1. Для калибровки установить 1 в enterec_addres
 2. Опустить измерительный щуп в раствор 1.413us/cm для калибровки на низкыом уровне или 12.88ms/cm для калибровки на высоком уровне(для лучшей точности следует провести 2 калибровки для двух растворов)
